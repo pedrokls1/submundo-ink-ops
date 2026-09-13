@@ -1581,9 +1581,9 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 
   function updateRemotePlayers(dt){
     for(const remote of multiplayer.remotePlayers.values()){
-      remote.group.position.lerp(remote.target,Math.min(1,dt*12));
+      remote.group.position.lerp(remote.target,Math.min(1,dt*18));
       let turn=((remote.targetYaw-remote.group.rotation.y+Math.PI)%(Math.PI*2)+Math.PI)%(Math.PI*2)-Math.PI;
-      remote.group.rotation.y+=turn*Math.min(1,dt*12);
+      remote.group.rotation.y+=turn*Math.min(1,dt*18);
       const moving=Math.hypot(remote.target.x-remote.group.position.x,remote.target.z-remote.group.position.z)>.035;
       remote.step+=dt*(moving?12:2);remote.legs[0].rotation.x=moving?Math.sin(remote.step)*.55:0;remote.legs[1].rotation.x=moving?-Math.sin(remote.step)*.55:0;
       remote.gun.scale.z=remote.weapon==='launcher'?1.28:(remote.weapon==='knife'?.52:1);
