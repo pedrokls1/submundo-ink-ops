@@ -27,16 +27,18 @@
     if(!url.includes('/api/multiplayer') || (init.method||'GET').toUpperCase()!=='POST') return nativeFetch(input,init);
     let body; try{body=typeof init.body==='string'?JSON.parse(init.body):init.body||{}}catch{return nativeFetch(input,init)}
     const action=body.action;
+    const wireBody={...body,token:playerId||body.token,secret:secret||body.secret};
     if(action==='state'){
-      try{const data=await call('state',body);return jsonResponse(data)}catch{return jsonResponse(latest||{players:[],scores:{azul:0,vermelho:0},self:{health:100,alive:true}},200)}
+      try{const data=await call('state',wireBody);return jsonResponse(data)}catch{return jsonResponse(latest||{players:[],scores:{azul:0,vermelho:0},self:{health:100,alive:true}},200)}
     }
     try{
       let data;
-      if(action==='create'||action==='join') data=await call(action,body);
-      else if(action==='heartbeat') data=lobby||await call('heartbeat',body);
-      else if(action==='settings'||action==='start'||action==='leave'||action==='hit') data=await call(action,body);
+      if(action==='create'||action==='join') data=await call(action,wireBody);
+      else if(action==='heartbeat') data=lobby||await call('heartbeat',wireBody);
+      else if(action==='settings'||action==='start'||action==='leave'||action==='hit') data=await call(action,wireBody);
       else return jsonResponse({error:'Ação não disponível na conexão em tempo real.'},410);
       if(data?.you){playerId=data.you;secret=data.secret||secret;localStorage.setItem('inkopsRealtimePlayer',playerId);localStorage.setItem('inkopsRealtimeSecret',secret)}
+      if(data?.players&&playerId&&body.token)data.players=data.players.map(p=>p.token===playerId?{...p,token:body.token}:p);
       if(data?.room||data?.players){lobby=data;window.__inkRealtimeLobby?.(lobby)}
       return jsonResponse(data);
     }catch(error){return jsonResponse({error:error.message||'Falha na conexão'},503)}
