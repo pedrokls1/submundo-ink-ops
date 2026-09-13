@@ -1642,7 +1642,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
     }catch(_){/* Uma perda curta de rede não interrompe a partida local. */}finally{multiplayer.networkBusy=false;}
   }
 
-  function startMultiplayerSync(){clearInterval(multiplayer.networkTimer);clearInterval(multiplayer.polling);multiplayer.selfAlive=true;if(multiplayer.roomCode&&multiplayer.room?.status==='playing'){onlineScoreEl.style.display='block';multiplayer.networkTimer=setInterval(pushMultiplayerState,900);pushMultiplayerState();hitNoticeEl.textContent='CONECTADO À SALA '+multiplayer.roomCode;hitNoticeEl.classList.add('show');hitNoticeTimer=1.4;}}
+  function startMultiplayerSync(){clearInterval(multiplayer.networkTimer);clearInterval(multiplayer.polling);multiplayer.selfAlive=true;if(multiplayer.roomCode&&multiplayer.room?.status==='playing'){onlineScoreEl.style.display='block';multiplayer.networkTimer=setInterval(pushMultiplayerState,100);pushMultiplayerState();hitNoticeEl.textContent='CONECTADO À SALA '+multiplayer.roomCode;hitNoticeEl.classList.add('show');hitNoticeTimer=1.4;}}
   function stopMultiplayerSync(clearPlayers=true){clearInterval(multiplayer.networkTimer);multiplayer.networkTimer=null;multiplayer.networkBusy=false;onlineScoreEl.style.display='none';if(clearPlayers){for(const remote of multiplayer.remotePlayers.values()){scene.remove(remote.group);remote.group.traverse(o=>{o.geometry?.dispose?.();o.material?.dispose?.();});}multiplayer.remotePlayers.clear();}}
 
   function startGame(){
