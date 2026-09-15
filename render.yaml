@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: submundo-ink-ops-realtime
+    runtime: node
+    plan: free
+    region: virginia
+    buildCommand: npm ci --ignore-scripts
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
