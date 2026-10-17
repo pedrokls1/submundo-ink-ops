@@ -109,6 +109,8 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   };
 
   let running = false;
+  // V56.51: declarar antes da primeira chamada a applyMapVisibility (evita ReferenceError/TDZ).
+  let pilotHeli=null;
   // V56 — seleção de mapas. O servidor sincroniza isto no multiplayer.
   let activeMap = localStorage.getItem('inkopsMap') || 'reino';
   // V56.13: corpos de construção dos mapas vivem em public/maps/*.js
@@ -2806,7 +2808,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
 
   // WAR 56.50 — protótipo de helicóptero de transporte (piloto local, voo arcade).
   // Esta primeira integração permite TESTAR voo e pouso; sincronização multiplayer de veículos virá depois.
-  const warHelis=[]; let pilotHeli=null,heliRotorTime=0;
+  const warHelis=[]; let heliRotorTime=0;
   const heliUI=document.createElement('div'); heliUI.id='warHeliControls';heliUI.style.cssText='position:fixed;bottom:13%;left:50%;transform:translateX(-50%);z-index:70;display:none;gap:7px;align-items:center;background:rgba(247,244,234,.9);border:2px solid #171510;padding:8px;border-radius:12px;pointer-events:auto';
   heliUI.innerHTML='<button data-h="left">↶</button><button data-h="forward">AVANÇAR</button><button data-h="back">RECUAR</button><button data-h="right">↷</button><button data-h="up">SUBIR</button><button data-h="down">DESCER</button><button data-h="exit">SAIR</button>';
   document.body.appendChild(heliUI);const heldHeli=new Set();
