@@ -17,11 +17,12 @@
 @media(min-width:950px){#controls{opacity:.50}}
 @media(max-width:760px){#info{max-width:88vw}#warPanel{top:92px;right:8px;left:8px}#scoreRow .scoreBox{min-width:88px;font-size:11px}#phaseHud,#objectiveHud{font-size:11px}}
 @media(max-width:620px){#controls{left:12px;right:12px;bottom:30px}#stick{width:132px;height:132px}#nub{left:33px;top:33px}}
+#warPanel{top:8px;left:50%;transform:translateX(-50%);gap:2px;width:max-content;max-width:64vw}#scoreRow{gap:3px;justify-content:center}#scoreRow .scoreBox{min-width:unset;font-size:10px;padding:4px 6px;border-width:1px}#phaseHud{justify-content:center;gap:6px;padding:3px 7px;font-size:10px;border-width:1px}#objectiveHud{padding:3px 7px;font-size:10px;text-align:center;border-width:1px}#info{display:none}#top{z-index:20;right:auto}#top>a button{font-size:10px;padding:5px 7px}#extraOptions{pointer-events:auto;position:relative;background:#f9f6ece8;border:1px solid #243f67;border-radius:7px;padding:4px}#extraOptions summary{cursor:pointer;list-style:none}#extraOptions button{display:block;margin-top:4px;font-size:10px}#notice{top:25%;z-index:30}@media(max-width:760px){#warPanel{top:8px;left:50%;right:auto;max-width:57vw;min-width:190px}#phaseHud,#objectiveHud{font-size:9px}#scoreRow .scoreBox{font-size:9px;padding:3px}}
 </style></head><body>
-<div id="top"><a href="/" style="pointer-events:auto"><button>← JOGO ORIGINAL</button></a><div id="info">CARREGANDO O MAPA...</div><button id="team">TROCAR BASE</button><button id="reset">RENASCE</button></div>
+<div id="top"><a href="/" style="pointer-events:auto"><button>← JOGO ORIGINAL</button></a><div id="info">CARREGANDO O MAPA...</div><details id="extraOptions"><summary>⚙</summary><button id="team">TROCAR BASE</button><button id="reset">RENASCE</button></details></div>
 <div id="warPanel"><div id="scoreRow"><div id="scoreBlue" class="scoreBox">AZUL 0</div><div id="scoreRed" class="scoreBox">VERMELHO 0</div><div id="scoreGreen" class="scoreBox">VERDE 0</div></div><div id="phaseHud"><span id="matchTimer">20:00</span><span id="phaseLabel">CONFRONTO INICIAL</span></div><div id="objectiveHud"><span id="objectiveLabel">SEM CONTROLE</span></div></div>
 <div id="notice"></div><div id="weaponHud">FUZIL 30 / 180</div><div id="cross"></div>
 <div id="controls"><div id="stick" aria-label="Analógico de movimento"><div id="nub"></div></div><div id="rightControls"><div id="verticalControls"><button data-k=" ">▲ SUBIR</button><button data-k="Shift">▼ DESCER</button></div><button id="board" style="display:none">ENTRAR</button><button id="fire">ATIRAR</button><button id="reload">RECARGA</button><button id="changeWeapon">ARMA ↻</button><button id="action">PULAR</button></div></div>
 <div id="modeHint">Analógico para mover • arraste a tela para olhar (inclusive nos veículos)</div>
-<script type="module" src="/war-mode.js?v=56.55"></script>
+<script type="module" src="/war-mode.js?v=56.56"></script>
 </body></html>
