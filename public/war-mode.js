@@ -21,7 +21,7 @@ const ink=0x24466e, paper=0xf5f0e3;
 const mat=(c)=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
 const treeMat=mat(0x5b8c48),trunkMat=mat(0x8a745d),inkMat=mat(ink),whiteMat=mat(paper),waterMat=new THREE.MeshLambertMaterial({color:0x79bfd4,flatShading:true});
 
-const flatZones=[[-325,-220,53],[290,-250,53],[0,365,53],[-360,85,53],[365,55,53],[10,-340,53],[40,195,53],[-500,-40,66],[500,-120,64],[-260,-500,64],[300,470,64],[0,510,96]];
+const flatZones=[[-325,-220,53],[290,-250,53],[0,365,53],[-360,85,53],[365,55,53],[10,-340,53],[40,195,53],[-520,-90,64],[520,-180,62],[-430,410,60],[430,390,60],[0,0,122]];
 function terrainRaw(x,z){
   const d=Math.hypot(x,z);
   let h=8+11*Math.sin(x*.011)*Math.cos(z*.012)+6*Math.sin((x+z)*.029);
@@ -117,19 +117,20 @@ for(const z of [-320,-130,120,320]) bridge(z);
 
 const groundRay=new THREE.Raycaster();
 function groundSurface(x,z){groundRay.set(new THREE.Vector3(x,600,z),new THREE.Vector3(0,-1,0));const hit=groundRay.intersectObject(terrainMesh,false)[0];return hit?hit.point.y:height(x,z);}
-function driveHeight(x,z,vehicle=null){
-  let y=groundSurface(x,z);
+function driveHeight(x,z,entity=null,currentY=null){
+  const ground=groundSurface(x,z); let y=ground;
   for(const b of bridges){
     if(!(x>=b.x1&&x<=b.x2&&Math.abs(z-b.z)<b.width*.52)) continue;
-    const deck=b.elevation(x);
-    if(!vehicle || vehicle.type==='heli') continue;
-    const inCore=x>=b.core1&&x<=b.core2;
-    const nearDeck=Math.abs(vehicle.group.position.y-deck)<4.8;
-    const onApproach=!inCore;
-    if(vehicle.onBridge || nearDeck || onApproach){vehicle.onBridge=true; y=Math.max(y,deck);} 
-    return y;
+    const deck=b.elevation(x), inCore=x>=b.core1&&x<=b.core2, onRamp=!inCore;
+    const refY=currentY ?? (entity?.group?.position?.y ?? ground);
+    if(entity?.type==='heli') return ground;
+    if(onRamp){ if(entity) entity.onBridge=true; return Math.max(ground,deck); }
+    const takeTop=(entity?.onBridge) || refY>deck-3.8;
+    if(takeTop){ if(entity) entity.onBridge=true; return Math.max(ground,deck); }
+    if(entity) entity.onBridge=false;
+    return ground;
   }
-  if(vehicle && vehicle.type!=='heli') vehicle.onBridge=false;
+  if(entity && entity.type!=='heli') entity.onBridge=false;
   return y;
 }
 
@@ -188,10 +189,8 @@ for(let i=0;i<3;i++){
 }
 
 const cy=height(0,0);
-cylinder(0,cy+6,0,45,12,0xc9c8c2,16); cylinder(0,cy+15,0,30,7,0xfaf8f1,16); cylinder(0,cy+24,0,15,13,0x65778a,16);
-const radar=new THREE.Mesh(new THREE.SphereGeometry(13,16,10),whiteMat); radar.position.set(0,cy+39,0); scene.add(radar);
-for(let i=0;i<8;i++){const a=i*Math.PI/4; tower(69*Math.cos(a),69*Math.sin(a));}
-for(let i=0;i<24;i++){const a=i*2.399,r=92+((i*37)%148),x=r*Math.cos(a),z=r*Math.sin(a); building(x,z,i%3===0?0x8a8e92:0xc69d69,12,10);}
+// Centro mantido mais livre para destacar o aeroporto principal.
+for(let i=0;i<8;i++){const a=i*Math.PI/4,r=112,x=r*Math.cos(a),z=r*Math.sin(a); box(x,cy+1.2,z,8,2.4,8,0xa79c86);} 
 
 const placeOutpost=(x,z,accent)=>{for(let k=0;k<4;k++){const dx=(k%2)*25-12,dz=Math.floor(k/2)*24-12;if(bases.every(b=>Math.hypot(x+dx-b.x,z+dz-b.z)>112)) building(x+dx,z+dz,accent,12+(k%2)*4,11);} tower(x+34,z-28,accent); for(let k=0;k<5;k++){const xx=x-32+(k%3)*14,zz=z+38+Math.floor(k/3)*12; box(xx,height(xx,zz)+2,zz,7,4,7,0xa99b82);}};
 
@@ -226,31 +225,34 @@ function powerStation(x,z){
   for(const dx of [-30,0,30]){const gy=flatLevel(x+dx,z+26); box(x+dx,gy+12,z+26,2.1,24,2.1,0x6b737a); box(x+dx,gy+23,z+26,10,1,1,0x6b737a);} 
 }
 function airstrip(x,z){
-  const y=flatLevel(x,z); 
-  box(x,y+.1,z,74,.22,220,0x726b65); 
-  box(x,y+.17,z,2,.20,204,0xe9e3d5);
-  for(let i=0;i<10;i++) box(x,y+.18,z-84+i*18,1.8,.22,8,0xe9e3d5);
-  box(x-25,y+.18,z-88,16,.2,2.2,0xe9e3d5); box(x+25,y+.18,z-88,16,.2,2.2,0xe9e3d5);
-  const hangar=box(x-46,y+9,z-48,30,18,24,0xd8d2c6); box(x-46,y+18.5,z-48,32,2,26,0x8ea4b1); 
-  const office=box(x+46,y+6,z-38,18,12,14,0xe4ded2); box(x+46,y+12.5,z-38,20,1.5,16,0x7f95a6);
-  tower(x+52,z+58,0x7388a0);
+  const y=flatLevel(x,z);
+  box(x,y+.08,z,92,.18,280,0x726b65);
+  box(x,y+.16,z,2,.16,250,0xe9e3d5);
+  for(let i=0;i<12;i++) box(x,y+.17,z-108+i*20,2.2,.18,9,0xe9e3d5);
+  for(const sx of [-34,34]){for(let i=0;i<6;i++) box(x+sx,y+.16,z-92+i*34,12,.16,2,0xe9e3d5);} 
+  box(x-72,y+10,z-64,42,20,28,0xd7d0c2); box(x-72,y+20.8,z-64,44,1.6,30,0x8da4b5); // hangar
+  box(x+78,y+7,z-54,22,14,18,0xe4ded2); box(x+78,y+14.5,z-54,24,1.2,20,0x7f95a6); // office
+  tower(x+86,z+82,0x7388a0);
+  for(const px of [-56,-32,-8,16,40]){crate(x+px,z-86,7,3,7,0x9b8260);} 
   const plane=new THREE.Group();
-  const fuselage=new THREE.Mesh(new THREE.CapsuleGeometry(1.7,15,5,10),mat(0xe8e3d7)); fuselage.rotation.z=Math.PI/2; plane.add(fuselage);
-  const nose=new THREE.Mesh(new THREE.SphereGeometry(1.8,10,8),mat(0x9fb4c4)); nose.position.x=-8.4; plane.add(nose);
-  const wing=box(0,0,0,20,.35,5,0x6c89a8); plane.add(wing); wing.position.set(0,.2,0);
-  const tailWing=box(0,0,0,7,.22,2.2,0x6c89a8); plane.add(tailWing); tailWing.position.set(6.6,1.4,0);
-  const fin=box(0,0,0,1.1,3.2,2.2,0x6c89a8); plane.add(fin); fin.position.set(7.2,2.1,0);
-  const engine1=new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,2.4,10),mat(0x8996a1)); engine1.rotation.z=Math.PI/2; engine1.position.set(-2,-.5,-2.2); plane.add(engine1);
-  const engine2=engine1.clone(); engine2.position.z=2.2; plane.add(engine2);
-  plane.position.set(x+2,y+2.4,z+56); plane.rotation.y=Math.PI/2; scene.add(plane);
+  const fuselage=new THREE.Mesh(new THREE.CapsuleGeometry(3.1,26,6,14),mat(0xe7e2d8)); fuselage.rotation.z=Math.PI/2; plane.add(fuselage);
+  const cockpit=new THREE.Mesh(new THREE.SphereGeometry(3.15,14,10),mat(0x9fb4c4)); cockpit.scale.set(1.15,.92,.92); cockpit.position.x=-15; plane.add(cockpit);
+  const wing=new THREE.Mesh(new THREE.BoxGeometry(18,.6,34),mat(0x6c89a8)); wing.position.set(-1.5,.6,0); plane.add(wing);
+  const tailWing=new THREE.Mesh(new THREE.BoxGeometry(8,.36,16),mat(0x6c89a8)); tailWing.position.set(12,4.8,0); plane.add(tailWing);
+  const fin=new THREE.Mesh(new THREE.BoxGeometry(2.2,8,5),mat(0x6c89a8)); fin.position.set(14,7.6,0); plane.add(fin);
+  for(const ex of [-7,3]) for(const ez of [-9,9]){const eng=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.35,4.8,12),mat(0x87939c)); eng.rotation.z=Math.PI/2; eng.position.set(ex,-1.2,ez); plane.add(eng);} 
+  for(const gx of [-10,4,12]){for(const gz of gx===12?[0]:[-6,6]){const strut=new THREE.Mesh(new THREE.BoxGeometry(.45,3.6,.45),mat(0x626a71)); strut.position.set(gx,-4.4,gz); plane.add(strut); const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,.9,12),inkMat); wheel.rotation.z=Math.PI/2; wheel.position.set(gx,-6.3,gz); plane.add(wheel);}}
+  plane.position.set(x+8,y+8.5,z+58); plane.rotation.y=Math.PI/2; scene.add(plane);
+  // wing and fuselage as cover references nearby
+  for(const [dx,dz] of [[-22,44],[-6,74],[18,44],[30,74]]) crate(x+dx,z+dz,9,4,9,0x8f7b61);
 }
 
 // 5 setores temáticos para referência visual no mapa.
-oilField(-500,-40);
-cargoYard(500,-120);
-scrapYard(-260,-500);
-powerStation(300,470);
-airstrip(0,510);
+oilField(-520,-90);
+cargoYard(520,-180);
+scrapYard(-430,410);
+powerStation(430,390);
+airstrip(0,0);
 for(let i=0;i<70;i++){const x=((i*181+89)%1010)-505,z=((i*233+91)%1020)-510;if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<115)||Math.hypot(x,z)<85) continue; const y=height(x,z),r=3+i%5; const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),mat(i%3?0xd2c8b3:0xbeb6a6)); rock.position.set(x,y+r*.32,z); rock.scale.y=1.2+(i%4)*.32; scene.add(rock);} 
 // Water is a flat ribbon just above the excavated riverbed, never a raised tube.
 const waterVertices=[],waterIndices=[];
@@ -273,7 +275,7 @@ for(let i=0;i<180;i++){
   tuft.position.set(x,y+.2,z); tuft.rotation.y=(i*.61)%Math.PI; scene.add(tuft);
 }
 
-const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null};
+const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null,onBridge:false};
 let orbitYaw=0,orbitPitch=.2;
 scene.add(camera);
 const weapon=new THREE.Group(); camera.add(weapon);
@@ -345,8 +347,8 @@ function updateObjectives(dt,elapsed){
   objectiveEl.textContent=currentText; updateScoreHud(state); if(elapsed>=match.duration) endMatch();
 }
 
-function spawn(){player.vehicle=null;jumpHeight=0;jumpVelocity=0;updateModeControls();const b=bases[player.team],d=new THREE.Vector2(-b.x,-b.z).normalize();player.pos.set(b.x+d.x*18,height(b.x+d.x*18,b.z+d.y*18)+2,b.z+d.y*18);player.yaw=Math.atan2(-d.x,-d.y);player.pitch=0;showNotice(`TIME ${TEAM_NAMES[player.team]} • BASE PROTEGIDA`);} 
-function enter(){if(player.vehicle){const p=player.vehicle.group.position;if(player.vehicle.type==='heli'&&p.y>height(p.x,p.z)+7){showNotice('DESÇA E POUSE ANTES DE SAIR');return;}let ex=p.x+8,ez=p.z+8;if(blocked(ex,ez)){ex=p.x-8;ez=p.z-8;}player.pos.set(ex,height(ex,ez)+2,ez);player.vehicle=null;updateModeControls();return;} let nearest=null,dist=13; for(const v of [...helis,...cars]){const d=player.pos.distanceTo(v.group.position); if(d<dist){dist=d;nearest=v;}} if(nearest){player.vehicle=nearest; player.yaw=nearest.yaw; orbitYaw=0; orbitPitch=.2; updateModeControls(); showNotice(nearest.type==='heli'?'HELICÓPTERO • CONTROLE EM TERCEIRA PESSOA':'PICKUP • CONTROLE EM TERCEIRA PESSOA');} else showNotice('APROXIME-SE DE UM VEÍCULO');}
+function spawn(){player.vehicle=null;player.onBridge=false;jumpHeight=0;jumpVelocity=0;updateModeControls();const b=bases[player.team],d=new THREE.Vector2(-b.x,-b.z).normalize();player.pos.set(b.x+d.x*18,height(b.x+d.x*18,b.z+d.y*18)+2,b.z+d.y*18);player.yaw=Math.atan2(-d.x,-d.y);player.pitch=0;showNotice(`TIME ${TEAM_NAMES[player.team]} • BASE PROTEGIDA`);} 
+function enter(){if(player.vehicle){const p=player.vehicle.group.position;if(player.vehicle.type==='heli'&&p.y>height(p.x,p.z)+7){showNotice('DESÇA E POUSE ANTES DE SAIR');return;}let ex=p.x+8,ez=p.z+8;if(blocked(ex,ez)){ex=p.x-8;ez=p.z-8;}player.pos.set(ex,driveHeight(ex,ez,null,height(ex,ez)+2)+2,ez);player.vehicle=null;player.onBridge=false;updateModeControls();return;} let nearest=null,dist=13; for(const v of [...helis,...cars]){const d=player.pos.distanceTo(v.group.position); if(d<dist){dist=d;nearest=v;}} if(nearest){player.vehicle=nearest; player.yaw=nearest.yaw; orbitYaw=0; orbitPitch=.2; updateModeControls(); showNotice(nearest.type==='heli'?'HELICÓPTERO • CONTROLE EM TERCEIRA PESSOA':'PICKUP • CONTROLE EM TERCEIRA PESSOA');} else showNotice('APROXIME-SE DE UM VEÍCULO');}
 const board=document.getElementById('board'); board.addEventListener('click',enter); const action=document.getElementById('action'),verticalControls=document.getElementById('verticalControls');
 function updateModeControls(){const v=player.vehicle; weapon.visible=!v; fireButton.style.display=v?'none':'block'; reloadButton.style.display=v?'none':'block'; weaponHud.style.display=v?'none':'block'; verticalControls.style.display=v?.type==='heli'?'flex':'none'; action.textContent=v?'SAIR':'PULAR'; document.getElementById('modeHint').textContent=v?.type==='heli'?'Analógico: voar e virar • arraste a tela para olhar • ▲ subir / ▼ descer':v?'Analógico: dirigir • arraste a tela para olhar • SAIR para desembarcar':'Analógico: mover • arraste a tela para olhar';}
 action.addEventListener('click',()=>{if(player.vehicle){enter();return;} if(jumpHeight<=.02) jumpVelocity=10.8;});
@@ -379,10 +381,11 @@ function animate(){
 
   if(v){
     const turn=(Number(!!keys.e)-Number(!!keys.q));
-    v.yaw+=(turn-side)*dt*(v.type==='heli'?1.12:1.82);
+    const steerRaw=(turn-side); const steer=Math.abs(steerRaw)<.12?0:steerRaw; const thrust=Math.abs(f)<.08?0:f;
+    v.yaw+=steer*dt*(v.type==='heli'?1.08:1.82);
     v.group.rotation.y=v.yaw-Math.PI/2;
     if(v.type==='heli'){
-      v.targetSpeed=f*75; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*2.2));
+      v.targetSpeed=thrust*75; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*2.2));
       v.targetVertical=(Number(!!keys[' '])-Number(!!keys.shift))*35; v.vertical=THREE.MathUtils.lerp(v.vertical,v.targetVertical,Math.min(1,dt*2.4));
     }else{v.targetSpeed=f*38; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*3.2));}
     v.group.position.x+=-Math.sin(v.yaw)*v.speed*dt; v.group.position.z+=-Math.cos(v.yaw)*v.speed*dt;
@@ -393,15 +396,15 @@ function animate(){
       v.rotor.rotation.y+=dt*18; v.tailRotor.rotation.z+=dt*31;
       // Powerful visible tilt with gentle easing; pitching at forward/backward input,
       // banking on lateral control. Visual only, without aircraft rigid-body solver.
-      const bank=THREE.MathUtils.clamp((turn-side)*.60,-.60,.60);
-      const pitch=THREE.MathUtils.clamp(-f*.35-v.speed/75*.10+v.vertical/35*.04,-.42,.42);
-      v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,pitch,1-Math.exp(-dt*3.2));
-      v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,bank,1-Math.exp(-dt*3.0));
-      v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,(turn-side)*.08,1-Math.exp(-dt*2.0));
+      const bank=THREE.MathUtils.clamp(steer*.72,-.72,.72);
+      const pitch=THREE.MathUtils.clamp(-thrust*.36+v.vertical/35*.03,-.40,.40);
+      v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,pitch,1-Math.exp(-dt*3.6));
+      v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,bank,1-Math.exp(-dt*3.4));
+      v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,0,1-Math.exp(-dt*4.0));
     }else{
       const xx=v.group.position.x,zz=v.group.position.z,ang=terrainAttitude(xx,zz,v.yaw);
       const fw=new THREE.Vector2(-Math.sin(v.yaw),-Math.cos(v.yaw)),rt=new THREE.Vector2(Math.cos(v.yaw),-Math.sin(v.yaw));
-      const samples=[];for(const fx of [-2.1,2.1])for(const rz of [-1.65,1.65])samples.push(driveHeight(xx+fw.x*fx+rt.x*rz,zz+fw.y*fx+rt.y*rz,v));
+      const samples=[];for(const fx of [-2.1,2.1])for(const rz of [-1.65,1.65])samples.push(driveHeight(xx+fw.x*fx+rt.x*rz,zz+fw.y*fx+rt.y*rz,v,v.group.position.y));
       const avg=samples.reduce((a,b)=>a+b,0)/4;
       const frontAvg=(samples[2]+samples[3])*.5,rearAvg=(samples[0]+samples[1])*.5,leftAvg=(samples[0]+samples[2])*.5,rightAvg=(samples[1]+samples[3])*.5;
       const targetY=Math.max(avg+.95,Math.max(...samples)+.2);
@@ -410,7 +413,7 @@ function animate(){
       const roll=THREE.MathUtils.clamp(Math.atan2(rightAvg-leftAvg,3.3),-.26,.26);
       v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,roll,1-Math.exp(-dt*9));
       v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,-pitch,1-Math.exp(-dt*9));
-      v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,(turn-side)*.03,1-Math.exp(-dt*6));
+      v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,steer*.03,1-Math.exp(-dt*6));
       for(const wheel of v.wheelGroups) wheel.rotation.y+=v.speed*dt/.84;
     }
     const orbitAngle=v.yaw+orbitYaw,dist=v.type==='heli'?25:15;
@@ -425,7 +428,7 @@ function animate(){
     if(!blocked(player.pos.x,nextZ)) player.pos.z=nextZ;
     player.pos.x=THREE.MathUtils.clamp(player.pos.x,-580,580); player.pos.z=THREE.MathUtils.clamp(player.pos.z,-580,580);
     jumpVelocity-=26*dt; jumpHeight=Math.max(0,jumpHeight+jumpVelocity*dt); if(jumpHeight===0) jumpVelocity=0;
-    player.pos.y=groundSurface(player.pos.x,player.pos.z)+2+jumpHeight;
+    player.pos.y=driveHeight(player.pos.x,player.pos.z,{type:'foot',onBridge:player.onBridge},player.pos.y)+2+jumpHeight; player.onBridge=(player.pos.y-jumpHeight)>groundSurface(player.pos.x,player.pos.z)+2.5;
     camera.position.copy(player.pos); camera.rotation.order='YXZ'; camera.rotation.y=player.yaw; camera.rotation.x=player.pitch;
   }
 
