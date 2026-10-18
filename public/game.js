@@ -4,8 +4,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.m
 import { wonderlandMapBody } from './maps/wonderland.js?v=5615';
 import { giantBedroomMapBody } from './maps/giant-bedroom.js?v=5626';
 import { chaosPortMapBody } from './maps/chaos-port.js?v=5615';
-import { ruptureValleyMapBody } from './maps/rupture-valley.js?v=5649';
-window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody, porto: chaosPortMapBody, vale: ruptureValleyMapBody };
+window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody, porto: chaosPortMapBody };
 
 (() => {
   'use strict';
@@ -109,12 +108,10 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   };
 
   let running = false;
-  // V56.51: declarar antes da primeira chamada a applyMapVisibility (evita ReferenceError/TDZ).
-  let pilotHeli=null;
   // V56 — seleção de mapas. O servidor sincroniza isto no multiplayer.
   let activeMap = localStorage.getItem('inkopsMap') || 'reino';
   // V56.13: corpos de construção dos mapas vivem em public/maps/*.js
-  let bedroomObjects=[], kingdomObjects=[], portObjects=[], valleyObjects=[], bedroomColliders=[], portColliders=[], bedroomTeddy=null, bedroomTeddyCollider=null, bedroomTeddyRespawn=0, bedroomCotton=[], bedroomBall=null, bedroomBallCollider=null, bedroomBallVel=new THREE.Vector2(), bedroomBallLastPos=new THREE.Vector2(24,-20), outletCooldown=0, phonePhase=0, phoneRingingUntil=0, bedroomLightOff=0, bedroomLightLock=0, bedroomMatchElapsed=0, bedroomPhoneRingMask=0, duckBounceCooldown=0, bedroomReward=null, bedroomRewardDrop=null, bedroomRewardRespawn=0, bedroomLampLight=null;
+  let bedroomObjects=[], kingdomObjects=[], portObjects=[], bedroomColliders=[], portColliders=[], bedroomTeddy=null, bedroomTeddyCollider=null, bedroomTeddyRespawn=0, bedroomCotton=[], bedroomBall=null, bedroomBallCollider=null, bedroomBallVel=new THREE.Vector2(), bedroomBallLastPos=new THREE.Vector2(24,-20), outletCooldown=0, phonePhase=0, phoneRingingUntil=0, bedroomLightOff=0, bedroomLightLock=0, bedroomMatchElapsed=0, bedroomPhoneRingMask=0, duckBounceCooldown=0, bedroomReward=null, bedroomRewardDrop=null, bedroomRewardRespawn=0, bedroomLampLight=null;
   const bedroomOutlets=[[-48.70,-24,1.7],[-48.70,18,1.7],[48.70,-33,8.2],[48.70,33,8.2],[-24,-39.70,1.7],[20,-39.70,1.7],[-22,39.70,1.7],[24,39.70,1.7]];
   let controlsEditing = false;
   let gameOver = false;
@@ -407,7 +404,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   const rocketInkStains=[];
   function createRocketInkStains(position,normal=null){
     const team=multiplayer.room?.players?.find(p=>p.token===multiplayer.token)?.team||'vermelho';
-    const color=team==='azul'?blue:(team==='verde'?green:red);
+    const color=team==='azul'?blue:red;
     const count=normal&&Math.abs(normal.y)<.65?7:9;
     for(let i=0;i<count;i++){
       const r=.20+Math.random()*.48;const mesh=addOutline(new THREE.Mesh(new THREE.CircleGeometry(r,7),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.72,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1})));
@@ -1070,19 +1067,13 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     eval(source);
   }
   buildPortMap();
-  function buildRuptureValley(){
-    const source=window.INK_MAP_BODIES?.['vale'];
-    if(!source) throw new Error('Mapa vale não carregado');
-    eval(source);
-  }
-  buildRuptureValley();
 
   function spawnOilSmoke(x,z){for(let i=0;i<34;i++){const puff=new THREE.Mesh(new THREE.SphereGeometry(.55+Math.random()*.85,7,6),new THREE.MeshBasicMaterial({color:i%4?0x090909:0x1b1b1b,transparent:true,opacity:.94,depthWrite:true}));const a=Math.random()*TAU,r=Math.random()*3.4;puff.position.set(x+Math.cos(a)*r,.5+Math.random()*3.4,z+Math.sin(a)*r);puff.userData.noBulletMark=true;puff.raycast=()=>{};scene.add(puff);mushroomSmoke.push({mesh:puff,vx:(Math.random()-.5)*.18,vy:.05+Math.random()*.10,vz:(Math.random()-.5)*.18,life:6.5+Math.random()*1.5,max:8});}}
   function damageOilBarrel(id,damage=25){const b=portOilBarrels.get(id);if(!b||!b.active||activeMap!=='porto')return;b.hp-=damage;if(b.hp>0)return;b.active=false;b.group.visible=false;b.collider.active=false;spawnOilSmoke(b.x,b.z);createInkExplosion(new THREE.Vector3(b.x,1.0,b.z));rocketExplosionSound();for(const [token,remote] of multiplayer.remotePlayers){const d=Math.hypot(remote.group.position.x-b.x,remote.group.position.z-b.z);if(d<4.8)reportRemoteHit(token,d<2.8?100:45,false);}if(Math.hypot(player.pos.x-b.x,player.pos.z-b.z)<4.5){hp=Math.max(0,hp-55);hurtTimer=.35;updateHud();}b.respawn=35;}
   function applyMapVisibility(){
-    if(activeMap!=='vale'&&pilotHeli)exitWarHeli();kingdomObjects.forEach(o=>o.visible=activeMap==='reino');bedroomObjects.forEach(o=>o.visible=activeMap==='quarto');portObjects.forEach(o=>o.visible=activeMap==='porto');valleyObjects.forEach(o=>o.visible=activeMap==='vale');if(cheshireCat)cheshireCat.visible=activeMap==='reino'&&cheshireCat.userData.alive!==false;if(goldenInkwell&&activeMap!=='reino')goldenInkwell.visible=false;for(const m of destructibleMushrooms.values()){m.group.visible=activeMap==='reino'&&m.active;m.collider.active=activeMap==='reino'&&m.active;}
+    kingdomObjects.forEach(o=>o.visible=activeMap==='reino');bedroomObjects.forEach(o=>o.visible=activeMap==='quarto');portObjects.forEach(o=>o.visible=activeMap==='porto');if(cheshireCat)cheshireCat.visible=activeMap==='reino'&&cheshireCat.userData.alive!==false;if(goldenInkwell&&activeMap!=='reino')goldenInkwell.visible=false;for(const m of destructibleMushrooms.values()){m.group.visible=activeMap==='reino'&&m.active;m.collider.active=activeMap==='reino'&&m.active;}
     for(const c of colliders)c.active=(c.map?c.map===activeMap:true);
-    if(activeMap==='quarto'){scene.background.set(0xeee5d4);scene.fog=new THREE.Fog(0xeee5d4,52,145);}else if(activeMap==='porto'){scene.background.set(0xe4e2da);scene.fog=new THREE.Fog(0xe4e2da,58,150);}else if(activeMap==='vale'){scene.background.set(0xe8e4da);scene.fog=new THREE.Fog(0xe8e4da,60,155);}else{scene.background.set(0xf1eadb);scene.fog=new THREE.Fog(0xf1eadb,48,138);}
+    if(activeMap==='quarto'){scene.background.set(0xeee5d4);scene.fog=new THREE.Fog(0xeee5d4,52,145);}else if(activeMap==='porto'){scene.background.set(0xe4e2da);scene.fog=new THREE.Fog(0xe4e2da,58,150);}else{scene.background.set(0xf1eadb);scene.fog=new THREE.Fog(0xf1eadb,48,138);}
   }
   applyMapVisibility(); resetEnemies();
 
@@ -1574,7 +1565,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
 
   function blocked(x,z) {
     const r=player.radius;
-    if(activeMap==='quarto'||activeMap==='porto'||activeMap==='vale'){if(Math.abs(x)>48.5-r||Math.abs(z)>39.5-r)return true;const feetY=player.pos.y-1.7;for(const c of colliders){if(c.active===false||c.map!==activeMap)continue;if(c.minY!=null&&feetY<c.minY-.08)continue;if(c.height!=null&&feetY>c.height-.08)continue;if(x+r>c.minX&&x-r<c.maxX&&z+r>c.minZ&&z-r<c.maxZ)return true;}return false;}
+    if(activeMap==='quarto'||activeMap==='porto'){if(Math.abs(x)>48.5-r||Math.abs(z)>39.5-r)return true;const feetY=player.pos.y-1.7;for(const c of colliders){if(c.active===false||c.map!==activeMap)continue;if(c.minY!=null&&feetY<c.minY-.08)continue;if(c.height!=null&&feetY>c.height-.08)continue;if(x+r>c.minX&&x-r<c.maxX&&z+r>c.minZ&&z-r<c.maxZ)return true;}return false;}
     if(window.__inkRabbitTunnelInfo&&player.pos.y<1.0){
       const feetY=player.pos.y-1.7;
       // V56.22: no subterraneo, as paredes visuais da toca tambem sao fisicas.
@@ -1632,8 +1623,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     const mates=players.filter(p=>p.team===team);let slot=Math.max(0,mates.findIndex(p=>p.token===multiplayer.token));
     if(slot<0)slot=0;
     const xs=[-3,-1.5,0,1.5,3];
-    const base=(activeMap==='quarto'||activeMap==='porto'||activeMap==='vale')?35:36;
-    if(activeMap==='vale'&&team==='verde')return {x:-40+(slot%3)*1.5,z:(Math.floor(slot/3)-1)*2,yaw:-Math.PI/2};
+    const base=(activeMap==='quarto'||activeMap==='porto')?35:36;
     return {x:xs[Math.min(slot,xs.length-1)],z:team==='vermelho'?-base:base,yaw:team==='vermelho'?Math.PI:0};
   }
 
@@ -1875,7 +1865,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     wrap.style.cssText='position:fixed;inset:0;z-index:80;display:none;place-items:center;padding:18px;background:rgba(243,239,228,.96);font-family:Georgia,serif;color:#171510;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y;overflow-y:auto;-webkit-overflow-scrolling:touch';
     wrap.innerHTML=`<div style="width:min(94vw,620px);max-height:92vh;overflow:auto;padding:22px;border:4px solid #171510;border-radius:14px;background:#fcfbf7;box-shadow:9px 9px 0 #294aa3;position:relative">
       <button data-close aria-label="Fechar" style="position:absolute;right:12px;top:10px;border:2px solid #171510;background:#eee7d4;border-radius:8px;font:900 18px Georgia;width:38px;height:34px">×</button>
-      <div style="font-size:12px;font-weight:900;letter-spacing:.13em;color:#294aa3">DRAWN FRONT • MULTIPLAYER / GUERRA</div><div style="display:flex;gap:8px;margin-top:10px"><button data-mode="classic" style="flex:1;padding:9px;background:#edf0ff;border:2px solid #294aa3;font-weight:900">MULTIPLAYER CLÁSSICO</button><button data-mode="war" style="flex:1;padding:9px;background:#def4e6;border:2px solid #278554;font-weight:900">MODO GUERRA</button></div>
+      <div style="font-size:12px;font-weight:900;letter-spacing:.13em;color:#294aa3">MULTIPLAYER ALFA • 5X5</div>
       <h2 style="margin:8px 0 5px;font-size:clamp(27px,6vw,43px);line-height:.95">SALA DE RABISCOS</h2>
       <p data-status style="min-height:20px;margin:8px 0 14px;font-weight:700">Crie uma sala ou entre com o código de um amigo.</p>
       <label style="display:block;font-weight:900;margin-bottom:5px">SEU APELIDO</label>
@@ -1887,17 +1877,17 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
       <div data-room style="display:none;margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border:3px dashed #294aa3;background:#eef1f8"><strong>CÓDIGO: <span data-room-code style="font-size:24px;color:#d73535"></span></strong><button data-copy style="border:2px solid #171510;border-radius:7px;background:#fff;padding:7px;font:800 12px Georgia">COPIAR</button></div>
         <div data-players style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px"></div>
-        <div data-mapbox style="margin-top:11px;padding:9px;border:3px solid #171510;border-radius:10px;background:#f5f0e3"><strong style="display:block;margin-bottom:7px">MAPA</strong><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px"><button data-map="reino" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">♛ PAÍS DAS MARAVILHAS</button><button data-map="quarto" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">🧸 QUARTO GIGANTE</button><button data-map="porto" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">⚓ PORTO DO CAOS</button><button data-map="vale" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">🚁 VALE DA RUPTURA</button></div></div><button data-bots style="display:none;width:100%;margin-top:11px;padding:11px;border:3px solid #171510;border-radius:10px;background:#d73535;color:#fff;font:900 15px Georgia">BOTS: DESLIGADOS</button>
+        <div data-mapbox style="margin-top:11px;padding:9px;border:3px solid #171510;border-radius:10px;background:#f5f0e3"><strong style="display:block;margin-bottom:7px">MAPA</strong><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px"><button data-map="reino" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">♛ PAÍS DAS MARAVILHAS</button><button data-map="quarto" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">🧸 QUARTO GIGANTE</button><button data-map="porto" style="padding:10px;border:2px solid #171510;border-radius:8px;font:900 13px Georgia">⚓ PORTO DO CAOS</button></div></div><button data-bots style="display:none;width:100%;margin-top:11px;padding:11px;border:3px solid #171510;border-radius:10px;background:#d73535;color:#fff;font:900 15px Georgia">BOTS: DESLIGADOS</button>
         <div style="margin-top:11px;padding:9px;border:2px dashed #294aa3;border-radius:9px;background:#eef1f8;text-align:center;font:800 13px Georgia">VERSÃO DE TESTE</div>
         <button data-ready style="width:100%;margin-top:12px;padding:13px;border:3px solid #171510;border-radius:10px;background:#eee7d4;color:#171510;font:900 17px Georgia">MARCAR PRONTO</button><button data-start style="display:none;width:100%;margin-top:8px;padding:14px;border:3px solid #171510;border-radius:10px;background:#777;color:#fff;font:900 18px Georgia">AGUARDANDO TODOS FICAREM PRONTOS</button>
         <button data-leave style="width:100%;margin-top:8px;padding:9px;border:2px solid #171510;border-radius:8px;background:#eee7d4;font:800 13px Georgia">SAIR DA SALA</button>
         <small style="display:block;margin-top:8px;line-height:1.25">Para testar entre amigos sem interferência, deixe os bots desligados. Somente o líder altera essa opção.</small>
       </div>
-      <div data-solo-map style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:12px"><button data-solo="reino" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • MARAVILHAS</button><button data-solo="quarto" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • QUARTO</button><button data-solo="porto" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • PORTO</button><button data-solo="vale" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • VALE</button></div>
+      <div data-solo-map style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px"><button data-solo="reino" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • MARAVILHAS</button><button data-solo="quarto" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • QUARTO</button><button data-solo="porto" style="padding:10px;border:2px solid #171510;border-radius:8px;background:#fff;font:800 13px Georgia">SOLO • PORTO</button></div>
     </div>`;
     document.body.appendChild(wrap);
     const q=s=>wrap.querySelector(s), name=q('[data-name]'), code=q('[data-code]'), status=q('[data-status]');
-    name.value=multiplayer.nickname;window.__inkSelectedMode=window.__inkSelectedMode||'classic';for(const b of wrap.querySelectorAll('[data-mode]'))b.addEventListener('click',()=>{if(multiplayer.room)return;window.__inkSelectedMode=b.dataset.mode;activeMap=b.dataset.mode==='war'?'vale':'reino';localStorage.setItem('inkopsMap',activeMap);applyMapVisibility();for(const v of wrap.querySelectorAll('[data-mode]'))v.style.outline=v===b?'3px solid #171510':'none';});
+    name.value=multiplayer.nickname;
     const setStatus=(message,error=false)=>{status.textContent=message;status.style.color=error?'#b11f28':'#171510';};
     const request=async(action,extra={})=>{
       const nickname=name.value.trim().slice(0,14);
@@ -1909,12 +1899,12 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     const render=payload=>{
       multiplayer.room=payload.room; multiplayer.roomCode=payload.room?.code||'';
       if(multiplayer.roomCode)localStorage.setItem('inkopsRoomCode',multiplayer.roomCode);else localStorage.removeItem('inkopsRoomCode');
-      for(const b of wrap.querySelectorAll('[data-mode]')){b.disabled=!!multiplayer.room;b.style.opacity=multiplayer.room?.mode===b.dataset.mode||(!multiplayer.room&&window.__inkSelectedMode===b.dataset.mode)?'1':'.7';}q('[data-entry]').style.display=multiplayer.room?'none':'grid'; q('[data-room]').style.display=multiplayer.room?'block':'none';
+      q('[data-entry]').style.display=multiplayer.room?'none':'grid'; q('[data-room]').style.display=multiplayer.room?'block':'none';
       if(!multiplayer.room)return;
       q('[data-room-code]').textContent=multiplayer.room.code;
-      activeMap=payload.room.map||'reino';const players=q('[data-players]');players.replaceChildren();players.style.gridTemplateColumns=activeMap==='vale'?'repeat(3,minmax(0,1fr))':'repeat(2,minmax(0,1fr))';
-      for(const team of (activeMap==='vale'?['AZUL','VERMELHO','VERDE']:['AZUL','VERMELHO'])){
-        const box=document.createElement('div');box.dataset.team=team.toLowerCase();box.style.cssText='border:3px solid '+(team==='AZUL'?'#294aa3':(team==='VERDE'?'#278554':'#d73535'))+';border-radius:9px;padding:8px;min-height:92px;background:#f8f6ef;cursor:pointer;transition:transform .08s,background .08s';
+      const players=q('[data-players]');players.replaceChildren();
+      for(const team of ['AZUL','VERMELHO']){
+        const box=document.createElement('div');box.dataset.team=team.toLowerCase();box.style.cssText='border:3px solid '+(team==='AZUL'?'#294aa3':'#d73535')+';border-radius:9px;padding:8px;min-height:92px;background:#f8f6ef;cursor:pointer;transition:transform .08s,background .08s';
         const title=document.createElement('strong');title.textContent='TIME '+team+' • TOQUE PARA ENTRAR';box.appendChild(title);
         box.addEventListener('click',()=>{const meNow=multiplayer.room?.players?.find(p=>p.token===multiplayer.token);if(meNow&&meNow.team!==box.dataset.team)act('team',{team:box.dataset.team});});
         for(const p of payload.players.filter(p=>p.team===team.toLowerCase())){const row=document.createElement('div');row.textContent=(p.token===multiplayer.token?'✎ ':'• ')+p.nickname+(p.is_host?' ★':'')+(p.ready?'  ✓ PRONTO':'  …');row.style.marginTop='6px';box.appendChild(row);}players.appendChild(box);
@@ -1923,7 +1913,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
       activeMap=payload.room.map||'reino';localStorage.setItem('inkopsMap',activeMap);applyMapVisibility();q('[data-mapbox]').style.opacity=me?.is_host?'1':'.72';for(const b of wrap.querySelectorAll('[data-map]')){b.disabled=!me?.is_host;b.style.background=b.dataset.map===activeMap?'#3d8b68':'#eee7d4';b.style.color=b.dataset.map===activeMap?'#fff':'#171510';}
       const botsButton=q('[data-bots]');botsButton.style.display=me?.is_host?'block':'none';botsButton.textContent=payload.room.botsEnabled?'BOTS: LIGADOS ✓':'BOTS: DESLIGADOS';botsButton.style.background=payload.room.botsEnabled?'#3d8b68':'#d73535';
       if(multiplayer.room)multiplayer.room.players=payload.players;
-      setStatus(payload.room.status==='playing'?'A partida começou! Entrando no mapa…':(me?.is_host?(guests.length?(payload.players.length+'/'+(activeMap==='vale'?30:10)+' jogadores • '+guests.filter(p=>p.ready).length+'/'+guests.length+' convidados prontos.'): 'Você está sozinho na sala • pode iniciar agora.'):(me?.ready?'Você está PRONTO ✓ • aguardando o líder iniciar.':'Marque PRONTO para confirmar sua entrada na próxima partida.')));
+      setStatus(payload.room.status==='playing'?'A partida começou! Entrando no mapa…':(me?.is_host?(guests.length?(payload.players.length+'/10 jogadores • '+guests.filter(p=>p.ready).length+'/'+guests.length+' convidados prontos.'): 'Você está sozinho na sala • pode iniciar agora.'):(me?.ready?'Você está PRONTO ✓ • aguardando o líder iniciar.':'Marque PRONTO para confirmar sua entrada na próxima partida.')));
       if(payload.room.status==='playing'&&!running&&!multiplayer.blockAutoStart){hide();enterGameFullscreen();startGame();}
     };
     const poll=async()=>{if(!multiplayer.roomCode||multiplayer.busy)return;try{render(await request('heartbeat'));}catch(err){setStatus(err.message,true);}};
@@ -1931,7 +1921,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     const hide=()=>{wrap.style.display='none';};
     const show=()=>{wrap.style.display='grid';wrap.scrollTop=0;document.exitPointerLock?.();document.webkitExitPointerLock?.();startEl.classList.add('hidden');if(multiplayer.roomCode){poll();beginPolling();}};
     const act=async(action,extra={})=>{if(multiplayer.busy)return;multiplayer.busy=true;setStatus('Rabiscando a sala…');try{const data=await request(action,extra);render(data);beginPolling();}catch(err){setStatus(err.message,true);}finally{multiplayer.busy=false;}};
-    q('[data-create]').addEventListener('click',()=>act('create',{mode:window.__inkSelectedMode||'classic'}));
+    q('[data-create]').addEventListener('click',()=>act('create'));
     q('[data-join]').addEventListener('click',()=>{const roomCode=code.value.toUpperCase().replace(/[^A-Z0-9]/g,'');multiplayer.roomCode=roomCode;act('join',{roomCode});});
     q('[data-ready]').addEventListener('click',()=>{enterGameFullscreen();const me=multiplayer.room?.players?.find(p=>p.token===multiplayer.token);act('ready',{ready:!me?.ready});});
     q('[data-start]').addEventListener('click',()=>{enterGameFullscreen();multiplayer.blockAutoStart=false;act('start');});
@@ -1960,7 +1950,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     const group=new THREE.Group();
     group.userData.remoteCharacterV2=true;
 
-    const teamHex=state.team==='vermelho'?0xa91b29:(state.team==='verde'?0x278554:0x2354a8);
+    const teamHex=state.team==='vermelho'?0xa91b29:0x2354a8;
     const inkMat=mat(0x17181b), darkMat=mat(0x303136), gearMat=mat(0x25262a);
     const paperMat=mat(0xeee6d5), clothMat=mat(teamHex), graphiteMat=mat(0x3b3d43);
     const outlineMat=new THREE.MeshBasicMaterial({color:0x101114,side:THREE.BackSide});
@@ -2057,7 +2047,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     for(const x of [-.045,.035]){const drip=tag(new THREE.Mesh(new THREE.CapsuleGeometry(.014,.08,3,5),clothMat),'body');drip.position.set(x,-.055,-.098);pot.add(drip);}
 
     const myTeam=multiplayer.room?.players?.find(p=>p.token===multiplayer.token)?.team;
-    if(myTeam&&myTeam===state.team)group.add(makePlayerLabel(state.nickname,state.team==='vermelho'?'#a91b29':(state.team==='verde'?'#278554':'#2354a8')));
+    if(myTeam&&myTeam===state.team)group.add(makePlayerLabel(state.nickname,state.team==='vermelho'?'#a91b29':'#2354a8'));
 
     // Auditoria defensiva: qualquer mesh sem zona explicita vira BODY. Nunca HEAD por altura.
     group.traverse(o=>{if(o.isMesh){o.userData.remoteToken=state.token;if(o.userData.hitZone!=='head')o.userData.hitZone='body';}});
@@ -2104,7 +2094,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   }
 
   function createInkPuddle(position,team='azul'){
-    const color=team==='vermelho'?red:(team==='verde'?green:blue);
+    const color=team==='vermelho'?red:blue;
     const group=new THREE.Group();
     const disc=new THREE.Mesh(new THREE.CircleGeometry(1.05,18),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.70,depthWrite:false}));
     disc.rotation.x=-Math.PI/2;disc.position.y=.025;group.add(disc);
@@ -2113,7 +2103,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   }
   function removeInkPuddle(puddle){if(!puddle)return;scene.remove(puddle);puddle.traverse(o=>{o.geometry?.dispose?.();o.material?.dispose?.();});}
   function createDeathInkBurst(position,team='azul'){
-    const color=team==='vermelho'?red:(team==='verde'?green:blue);
+    const color=team==='vermelho'?red:blue;
     for(let i=0;i<14;i++){
       const drop=new THREE.Mesh(new THREE.SphereGeometry(.08+(i%4)*.025,6,5),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.88,depthWrite:false}));
       drop.position.set(position.x,Math.max(.55,position.y-1.0),position.z);
@@ -2156,7 +2146,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     if(!payload || !running) return;
     applyRemoteStates(payload.players || []);if(Array.isArray(payload.props))for(const st of payload.props){const id=String(st?.id||'');if(id==='teddy')applyBedroomTeddyState(st);else if(id.startsWith('r'))applyRabbitState(st);else applyMushroomState(st);}if(payload.bedroom)applyBedroomSharedState(payload.bedroom);if(payload.cat)setCheshireState(payload.cat);if(payload.reward)setGoldenRewardState(payload.reward);if(payload.match){const sec=Math.max(0,Math.ceil(Number(payload.match.remainingMs||0)/1000)),mm=String(Math.floor(sec/60)),ss=String(sec%60).padStart(2,'0'),clockText=mm+':'+ss+'  •  40 KILLS';if(matchClockEl.style.display!=='block')matchClockEl.style.display='block';if(matchClockEl.textContent!==clockText)matchClockEl.textContent=clockText;if(payload.match.status==='finished')window.__inkRealtimeMatchEnd?.(payload.match);}
     if(payload.self){const oldHp=hp,oldArmor=armor,serverHp=Math.max(0,Math.min(100,Number(payload.self.health??hp))),serverArmor=Math.max(0,Math.min(100,Number(payload.self.armor??armor)));const wasAlive=multiplayer.selfAlive;multiplayer.selfAlive=payload.self.alive;if(serverHp<oldHp||serverArmor<oldArmor)triggerDamageFeedback((oldHp-serverHp)+(oldArmor-serverArmor)*.45,payload.self.damageFrom,payload.self.damageAt);if(!payload.self.alive){hp=0;armor=serverArmor;createLocalDeathPuddle();showDeathScreen(payload.self.respawnSeconds);fireHeld=false;scopeMode=false;}else if(!wasAlive){rabbitTunnelMode=false;rabbitTunnelCooldown=0;verticalVelocity=0;grounded=true;hp=100;armor=100;reserveAmmo={...RESERVE_AMMO};ammo=weaponMode==='knife'?0:(MAGAZINES[weaponMode]||0);clearLocalDeathPuddle();hideDeathScreen();const sp=localTeamSpawn();player.pos.set(sp.x,1.7,sp.z);player.yaw=sp.yaw;updateHud();}else{hp=serverHp;armor=serverArmor;hideDeathScreen();updateHud();}}
-    if(payload.scores){const b=Number(payload.scores.azul||0),r=Number(payload.scores.vermelho||0);if(activeMap==='vale'){onlineScoreEl.style.display='block';onlineScoreEl.textContent='AZUL '+b+'  •  VERMELHO '+r+'  •  VERDE '+Number(payload.scores.verde||0);}if(onlineScoreEl.style.display!=='block')onlineScoreEl.style.display='block';if(b!==lastBlueScore){lastBlueScore=b;onlineBlueEl.textContent='AZUL '+b+'/40';}if(r!==lastRedScore){lastRedScore=r;onlineRedEl.textContent=r+'/40 VERMELHO';}}
+    if(payload.scores){const b=Number(payload.scores.azul||0),r=Number(payload.scores.vermelho||0);if(onlineScoreEl.style.display!=='block')onlineScoreEl.style.display='block';if(b!==lastBlueScore){lastBlueScore=b;onlineBlueEl.textContent='AZUL '+b+'/40';}if(r!==lastRedScore){lastRedScore=r;onlineRedEl.textContent=r+'/40 VERMELHO';}}
   };
 
   
@@ -2175,7 +2165,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   const ammoCompactEl=document.createElement('div');ammoCompactEl.id='ammoCompact';ammoCompactEl.style.cssText='position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:20;display:none;padding:5px 11px;border:2px solid #171510;border-radius:8px;background:rgba(252,251,247,.88);font:900 13px Georgia;color:#171510;pointer-events:none;white-space:nowrap';document.body.appendChild(ammoCompactEl);
   const kdaBtn=document.createElement('button');kdaBtn.id='kdaBtn';kdaBtn.textContent='KDA';kdaBtn.style.cssText='position:fixed;right:12px;top:12px;z-index:48;display:none;padding:7px 10px;border:2px solid #171510;border-radius:8px;background:rgba(252,251,247,.92);font:900 11px Georgia;color:#171510;pointer-events:auto;touch-action:none';document.body.appendChild(kdaBtn);
   const kdaPanel=document.createElement('div');kdaPanel.style.cssText='position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:70;display:none;width:min(92vw,520px);max-height:70vh;overflow:auto;padding:14px;border:3px solid #171510;border-radius:12px;background:rgba(252,251,247,.97);font:800 12px Georgia;color:#171510;pointer-events:auto';document.body.appendChild(kdaPanel);
-  function refreshKdaPanel(){const all=[];const self=multiplayer.room?.players?.find(p=>p.token===multiplayer.token);if(self)all.push({token:self.token,nickname:self.nickname,team:self.team,kills:kills,deaths:0});for(const r of multiplayer.remotePlayers.values()){const st=r.lastState||{};all.push({token:st.token,nickname:st.nickname||'Jogador',team:st.team||r.team,kills:st.kills||0,deaths:st.deaths||0});}const rows=all.map(p=>`<div style="display:grid;grid-template-columns:1fr 45px 45px;gap:8px;padding:7px;border-bottom:1px solid #aaa"><b style="color:${p.team==='azul'?'#294aa3':(p.team==='verde'?'#278554':'#d73535')}">${String(p.nickname||'Jogador').replace(/[<>]/g,'')}</b><span>K ${p.kills||0}</span><span>D ${p.deaths||0}</span></div>`).join('');kdaPanel.innerHTML='<div style="font:900 18px Georgia;margin-bottom:8px">PLACAR / KDA</div><div style="display:grid;grid-template-columns:1fr 45px 45px;gap:8px;padding:5px"><b>JOGADOR</b><b>K</b><b>D</b></div>'+rows;}
+  function refreshKdaPanel(){const all=[];const self=multiplayer.room?.players?.find(p=>p.token===multiplayer.token);if(self)all.push({token:self.token,nickname:self.nickname,team:self.team,kills:kills,deaths:0});for(const r of multiplayer.remotePlayers.values()){const st=r.lastState||{};all.push({token:st.token,nickname:st.nickname||'Jogador',team:st.team||r.team,kills:st.kills||0,deaths:st.deaths||0});}const rows=all.map(p=>`<div style="display:grid;grid-template-columns:1fr 45px 45px;gap:8px;padding:7px;border-bottom:1px solid #aaa"><b style="color:${p.team==='azul'?'#294aa3':'#d73535'}">${String(p.nickname||'Jogador').replace(/[<>]/g,'')}</b><span>K ${p.kills||0}</span><span>D ${p.deaths||0}</span></div>`).join('');kdaPanel.innerHTML='<div style="font:900 18px Georgia;margin-bottom:8px">PLACAR / KDA</div><div style="display:grid;grid-template-columns:1fr 45px 45px;gap:8px;padding:5px"><b>JOGADOR</b><b>K</b><b>D</b></div>'+rows;}
   kdaBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();refreshKdaPanel();kdaPanel.style.display=kdaPanel.style.display==='block'?'none':'block';});
   const matchClockEl=document.createElement('div');matchClockEl.id='matchClock';matchClockEl.style.cssText='position:fixed;right:12px;top:52px;z-index:20;display:none;padding:6px 11px;border:2px solid #171510;border-radius:8px;background:rgba(252,251,247,.90);font:900 13px Georgia;color:#171510;pointer-events:none;white-space:nowrap';document.body.appendChild(matchClockEl);
   const matchEndOverlay=document.createElement('div');matchEndOverlay.style.cssText='position:fixed;inset:0;z-index:80;display:none;place-items:center;background:rgba(15,17,20,.78);font-family:Georgia,serif';matchEndOverlay.innerHTML='<div style="width:min(88vw,520px);padding:28px;text-align:center;border:4px solid #171510;border-radius:16px;background:#fcfbf7;box-shadow:10px 10px 0 #294aa3"><div style="font:900 42px Georgia;color:#171510">FIM DA PARTIDA</div><div data-match-winner style="margin-top:14px;font:900 24px Georgia;color:#d73535"></div><div style="margin-top:8px;font:800 13px Georgia">6 MINUTOS • LIMITE 40 ABATES</div><button data-match-lobby style="margin-top:18px;padding:12px 18px;border:3px solid #171510;border-radius:10px;background:#294aa3;color:#fff;font:900 15px Georgia;pointer-events:auto">VOLTAR AO LOBBY / NOVA PARTIDA</button></div>';document.body.appendChild(matchEndOverlay);const matchWinnerEl=matchEndOverlay.querySelector('[data-match-winner]'),matchLobbyBtn=matchEndOverlay.querySelector('[data-match-lobby]');matchLobbyBtn.addEventListener('click',()=>{matchEndOverlay.style.display='none';running=false;stopMultiplayerSync(false);multiplayerLobby.show();});window.__inkRealtimeMatchEnd=data=>{if(!data)return;multiplayer.blockAutoStart=false;fireHeld=false;scopeMode=false;running=false;stopMultiplayerSync(false);matchEndOverlay.style.display='grid';matchWinnerEl.textContent=data.winner==='empate'?'EMPATE!':('TIME '+String(data.winner||'').toUpperCase()+' VENCEU!');};
@@ -2211,7 +2201,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
       const response=await fetch('/api/multiplayer',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({action:'state',token:multiplayer.token,roomCode:multiplayer.roomCode,nickname:multiplayer.nickname,x:player.pos.x,y:player.pos.y,z:player.pos.z,yaw:player.yaw,pitch:player.pitch,weapon:weaponMode,alive:hp>0})});clearTimeout(timeout);
       const data=await response.json();if(response.ok)applyRemoteStates(data.players);
       if(response.ok&&data.self)serverSpawnGrace=Math.max(0,Number(data.self.invulnerableMs||0)/1000);
-      if(response.ok&&data.scores){onlineScoreEl.style.display='block';onlineScoreEl.innerHTML='<span style="color:#294aa3">AZUL '+data.scores.azul+'</span> &nbsp;×&nbsp; <span style="color:#d73535">'+data.scores.vermelho+' VERMELHO</span>'+(activeMap==='vale'?' &nbsp;×&nbsp; <span style="color:#278554">'+data.scores.verde+' VERDE</span>':'');}
+      if(response.ok&&data.scores){onlineScoreEl.style.display='block';onlineScoreEl.innerHTML='<span style="color:#294aa3">AZUL '+data.scores.azul+'</span> &nbsp;×&nbsp; <span style="color:#d73535">'+data.scores.vermelho+' VERMELHO</span>';}
       if(response.ok&&data.self){
         const wasAlive=multiplayer.selfAlive;multiplayer.selfAlive=data.self.alive;
         if(!data.self.alive){hp=0;createLocalDeathPuddle();showDeathScreen(data.self.respawnSeconds);fireHeld=false;scopeMode=false;}
@@ -2805,46 +2795,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
   for(const el of movableControls){const d=v43HudDefaults[el.id];if(d&&!savedLayout[el.id]){Object.assign(el.style,{position:'fixed',...d});defaultControlPlacement.set(el,{position:'fixed',...d});}}
   });
 
-
-  // WAR 56.50 — protótipo de helicóptero de transporte (piloto local, voo arcade).
-  // Esta primeira integração permite TESTAR voo e pouso; sincronização multiplayer de veículos virá depois.
-  const warHelis=[]; let heliRotorTime=0;
-  const heliUI=document.createElement('div'); heliUI.id='warHeliControls';heliUI.style.cssText='position:fixed;bottom:13%;left:50%;transform:translateX(-50%);z-index:70;display:none;gap:7px;align-items:center;background:rgba(247,244,234,.9);border:2px solid #171510;padding:8px;border-radius:12px;pointer-events:auto';
-  heliUI.innerHTML='<button data-h="left">↶</button><button data-h="forward">AVANÇAR</button><button data-h="back">RECUAR</button><button data-h="right">↷</button><button data-h="up">SUBIR</button><button data-h="down">DESCER</button><button data-h="exit">SAIR</button>';
-  document.body.appendChild(heliUI);const heldHeli=new Set();
-  for(const b of heliUI.querySelectorAll('button')){b.style.cssText='padding:9px 6px;border:2px solid #171510;border-radius:6px;background:#e8e4da;font-weight:900;touch-action:none';const a=b.dataset.h;
-    b.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();b.setPointerCapture(e.pointerId);if(a==='exit'){exitWarHeli();return;}heldHeli.add(a);});
-    for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>heldHeli.delete(a));}
-  const heliPrompt=document.createElement('button');heliPrompt.id='heliPrompt';heliPrompt.textContent='🚁 PILOTAR HELICÓPTERO';heliPrompt.style.cssText='position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:61;border:3px solid #171510;border-radius:10px;background:#dce5da;padding:11px;font-weight:900;display:none;pointer-events:auto';document.body.appendChild(heliPrompt);
-  const makeWarHeli=(x,z,team)=>{const root=new THREE.Group(),body=mat(team==='azul'?0x7e9fca:team==='verde'?0x81a98b:0xc28a83),dark=mat(0x2a3439);
-    const fuselage=addOutline(new THREE.Mesh(new THREE.CapsuleGeometry(1.15,3.7,6,10),body));fuselage.rotation.z=Math.PI/2;root.add(fuselage);
-    const cabin=addOutline(new THREE.Mesh(new THREE.SphereGeometry(1.15,10,8),mat(0xa3bec5)));cabin.scale.set(.95,.8,1.25);cabin.position.set(-.75,.22,-.15);root.add(cabin);
-    const tail=addOutline(new THREE.Mesh(new THREE.BoxGeometry(4.0,.22,.35),body));tail.position.set(3,0,0);root.add(tail);
-    const fin=addOutline(new THREE.Mesh(new THREE.BoxGeometry(.20,1.3,.8),body));fin.position.set(4.8,.6,0);root.add(fin);
-    const mast=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.8,8),dark);mast.position.y=1.5;root.add(mast);
-    const rotor=new THREE.Group();for(let i=0;i<4;i++){const blade=new THREE.Mesh(new THREE.BoxGeometry(5.2,.08,.25),dark);blade.rotation.y=i*Math.PI/4;rotor.add(blade);}rotor.position.y=1.9;root.add(rotor);
-    for(const side of [-1,1]){const skid=new THREE.Mesh(new THREE.BoxGeometry(3.8,.14,.12),dark);skid.position.set(-.25,-1.25,side*1.05);root.add(skid);for(const px of [-1.4,1.0]){const strut=new THREE.Mesh(new THREE.BoxGeometry(.12,.8,.12),dark);strut.position.set(px,-.85,side*1.05);root.add(strut);}}
-    root.position.set(x,2.2,z);root.rotation.y=Math.PI/2;scene.add(root);const h={root,rotor,team,origin:[x,z],yaw:Math.PI/2,velocity:0,piloted:false};warHelis.push(h);return h;};
-  makeWarHeli(17,33,'azul');makeWarHeli(-17,-33,'vermelho');makeWarHeli(-41,-15,'verde');
-  function exitWarHeli(){if(!pilotHeli)return;const h=pilotHeli;h.piloted=false;pilotHeli=null;heldHeli.clear();heliUI.style.display='none';player.pos.set(Math.max(-46,Math.min(46,h.root.position.x+3)),1.7,Math.max(-37,Math.min(37,h.root.position.z+3)));}
-  function enterWarHeli(h){pilotHeli=h;h.piloted=true;h.velocity=0;heliUI.style.display='flex';heliPrompt.style.display='none';document.exitPointerLock?.();}
-  heliPrompt.addEventListener('click',()=>{const h=warHelis.find(h=>Math.hypot(h.root.position.x-player.pos.x,h.root.position.z-player.pos.z)<5);if(h&&activeMap==='vale')enterWarHeli(h);});
-  function updateWarHelis(dt){for(const h of warHelis){h.root.visible=activeMap==='vale';h.rotor.rotation.y+=dt*(h.piloted?29:2.2);}
-    if(!running||activeMap!=='vale'){heliPrompt.style.display='none';return;}
-    if(!pilotHeli){const near=warHelis.some(h=>Math.hypot(h.root.position.x-player.pos.x,h.root.position.z-player.pos.z)<5);heliPrompt.style.display=near?'block':'none';return;}
-    const h=pilotHeli,pressed=k=>heldHeli.has(k);const forward=pressed('forward')||keys.KeyW||keys.ArrowUp,back=pressed('back')||keys.KeyS||keys.ArrowDown;
-    const turn=(pressed('left')||keys.KeyA?-1:0)+(pressed('right')||keys.KeyD?1:0);
-    h.yaw+=turn*dt*1.5;h.root.rotation.y=h.yaw;
-    const movement=(forward?1:0)-(back?1:0);h.velocity+=(movement*13-h.velocity)*Math.min(1,dt*2.8);
-    const nx=h.root.position.x-Math.sin(h.yaw)*h.velocity*dt,nz=h.root.position.z-Math.cos(h.yaw)*h.velocity*dt;
-    h.root.position.x=Math.max(-45,Math.min(45,nx));h.root.position.z=Math.max(-36,Math.min(36,nz));
-    const rise=(pressed('up')||keys.Space?1:0)-(pressed('down')||keys.ShiftLeft?1:0);
-    h.root.position.y=Math.max(2.2,Math.min(34,h.root.position.y+rise*8*dt));h.root.rotation.z=-turn*.11;h.root.rotation.x=movement*.06;
-    player.pos.set(h.root.position.x,h.root.position.y+1,h.root.position.z);player.yaw=h.yaw;
-    if(keys.KeyE){keys.KeyE=false;exitWarHeli();}
-  }
-  function setWarHeliCamera(){if(!pilotHeli||activeMap!=='vale')return;const h=pilotHeli,away=new THREE.Vector3(Math.sin(h.yaw)*13,7,Math.cos(h.yaw)*13);camera.position.copy(h.root.position).add(away);camera.lookAt(h.root.position.x,h.root.position.y+1,h.root.position.z);}
-  function loop(now){if(!running)return;const dt=Math.min(.033,(now-last)/1000);last=now;if(!updateMatchIntro(now)){if(!pilotHeli)update(dt);updateWarHelis(dt);setWarHeliCamera();}renderer.render(scene,camera);requestAnimationFrame(loop);}
+  function loop(now){if(!running)return;const dt=Math.min(.033,(now-last)/1000);last=now;if(!updateMatchIntro(now))update(dt);renderer.render(scene,camera);requestAnimationFrame(loop);}
   updateHud();
   renderer.render(scene,camera);
 })();
