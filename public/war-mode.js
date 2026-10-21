@@ -392,6 +392,58 @@ renderer.domElement.addEventListener('pointerdown',e=>{if(lookId!==null) return;
 renderer.domElement.addEventListener('pointerup',e=>{if(e.pointerId===lookId){dragging=false;lookId=null;}}); renderer.domElement.addEventListener('pointercancel',()=>{dragging=false;lookId=null;});
 renderer.domElement.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==lookId) return; const dx=e.clientX-px,dy=e.clientY-py; px=e.clientX; py=e.clientY; if(player.vehicle){orbitYaw-=dx*.005; orbitPitch=THREE.MathUtils.clamp(orbitPitch+dy*.004,-.35,.85);} else{player.yaw-=dx*.004; player.pitch=THREE.MathUtils.clamp(player.pitch-dy*.003,-.85,.85);}});
 
+
+// Áudio procedural de motor: não depende de arquivos externos e funciona offline.
+// Os osciladores são criados uma única vez por sessão e modulados conforme o veículo.
+let engineAudio=null;
+function initEngineAudio(){
+  if(engineAudio){ if(engineAudio.ctx.state==='suspended') engineAudio.ctx.resume().catch(()=>{}); return engineAudio; }
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) return null;
+  try{
+    const ctx=new AC();
+    const master=ctx.createGain(); master.gain.value=.42; master.connect(ctx.destination);
+    const makeEngine=(type)=>{
+      const bus=ctx.createGain(); bus.gain.value=0; bus.connect(master);
+      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=type==='heli'?1250:700; filter.Q.value=.65; filter.connect(bus);
+      const osc1=ctx.createOscillator(), osc2=ctx.createOscillator(), sub=ctx.createOscillator();
+      osc1.type='sawtooth'; osc2.type='triangle'; sub.type='sawtooth';
+      const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
+      g1.gain.value=type==='heli'?.17:.20; g2.gain.value=type==='heli'?.12:.10; g3.gain.value=.14;
+      osc1.connect(g1);osc2.connect(g2);sub.connect(g3);g1.connect(filter);g2.connect(filter);g3.connect(filter);
+      osc1.start();osc2.start();sub.start();
+      let lfo=null,lfoGain=null;
+      if(type==='heli'){
+        lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=17;
+        lfoGain=ctx.createGain();lfoGain.gain.value=.035;lfo.connect(lfoGain);lfoGain.connect(bus.gain);lfo.start();
+      }
+      return {type,bus,filter,osc1,osc2,sub,lfo};
+    };
+    engineAudio={ctx,master,car:makeEngine('car'),heli:makeEngine('heli')};
+    return engineAudio;
+  }catch(e){return null;}
+}
+function updateEngineAudio(vehicle,dt){
+  if(!vehicle&&!engineAudio) return;
+  const a=engineAudio||initEngineAudio(); if(!a) return;
+  if(a.ctx.state==='suspended') a.ctx.resume().catch(()=>{});
+  const now=a.ctx.currentTime;
+  const active=vehicle;
+  for(const e of [a.car,a.heli]){
+    const isActive=!!active&&(e.type==='heli'?active.type==='heli':active.type==='jeep');
+    const speed=isActive?Math.min(1,Math.abs(active.speed||0)/(e.type==='heli'?75:38)):0;
+    const vertical=isActive&&e.type==='heli'?Math.min(1,Math.abs(active.vertical||0)/35):0;
+    const idle=e.type==='heli'?.13:.075;
+    const target=isActive?(idle+speed*(e.type==='heli'?.19:.23)+vertical*.035):0;
+    e.bus.gain.setTargetAtTime(target,now,.12);
+    const rpm=e.type==='heli'? (38+speed*42+vertical*5):(42+speed*92);
+    e.osc1.frequency.setTargetAtTime(rpm,now,.10);
+    e.osc2.frequency.setTargetAtTime(rpm*1.51,now,.10);
+    e.sub.frequency.setTargetAtTime(rpm*.5,now,.12);
+    e.filter.frequency.setTargetAtTime(e.type==='heli'?850+speed*1100:380+speed*1500,now,.15);
+  }
+}
+
 function animate(){
   requestAnimationFrame(animate);
   const dt=Math.min(.05,clock.getDelta());
@@ -399,6 +451,7 @@ function animate(){
   const f=THREE.MathUtils.clamp(Number(!!keys.w)-Number(!!keys.s)+stick.y,-1,1);
   const side=THREE.MathUtils.clamp(Number(!!keys.d)-Number(!!keys.a)+stick.x,-1,1);
   const v=player.vehicle;
+  updateEngineAudio(v,dt);
   if(shootHeld) shoot();
   kick=Math.max(0,kick-dt*.8); weapon.rotation.x=kick;
   camera.fov=THREE.MathUtils.lerp(camera.fov,aiming&&!v?42:72,Math.min(1,dt*10)); camera.updateProjectionMatrix();
@@ -425,7 +478,9 @@ function animate(){
       // Powerful visible tilt with gentle easing; pitching at forward/backward input,
       // banking on lateral control. Visual only, without aircraft rigid-body solver.
       const bank=THREE.MathUtils.clamp(steer*.68,-.68,.68);
-      const pitch=THREE.MathUtils.clamp(-thrust*.34+v.vertical/35*.025,-.36,.36);
+      // O nariz estava levantando ao acelerar. Inverter o sinal faz o comando
+      // para frente baixar o nariz; o controle lateral permanece independente.
+      const pitch=THREE.MathUtils.clamp(thrust*.34-v.vertical/35*.025,-.36,.36);
       // O corpo aponta ao longo do eixo X local: roll em X, nariz para cima/baixo em Z.
       v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,bank,1-Math.exp(-dt*3.6));
       v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,pitch,1-Math.exp(-dt*3.4));
