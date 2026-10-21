@@ -465,7 +465,7 @@ function updateEngineAudio(vehicle,dt){
     const vertical=isActive&&e.type==='heli'?Math.min(1,Math.max(0,active.vertical||0)/35):0;
     const idle=e.type==='heli'?.13:.075;
     // O helicóptero ganha mais volume e rotação quando sobe, sem soar como carro.
-    const target=isActive?(e.type==='heli'?(idle+speed*.065+vertical*.23)*1.2:(idle+speed*.23)):0;
+    const target=isActive?(e.type==='heli'?(idle+speed*.065+vertical*.23)*1.44:(idle+speed*.23)):0;
     e.bus.gain.setTargetAtTime(target,now,.12);
     const rpm=e.type==='heli'? (34+speed*8+vertical*5):(42+speed*92);
     e.osc1.frequency.setTargetAtTime(rpm,now,.10);
