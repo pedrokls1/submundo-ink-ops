@@ -167,7 +167,7 @@ function helicopter(x,z,color,yaw=0){
   const v={type:'heli',group,model,rotor,tailRotor,speed:0,targetSpeed:0,yaw,vertical:0,targetVertical:0}; helis.push(v); return v;
 }
 function jeep(x,z,color,yaw=0){
-  const group=new THREE.Group(),model=new THREE.Group(),wheelGroups=[];
+  const group=new THREE.Group(),model=new THREE.Group(),wheelGroups=[],frontWheelPivots=[];
   group.add(model);
   const body=new THREE.Mesh(new THREE.BoxGeometry(6.6,1.55,3.5),mat(color));body.position.y=1.85;model.add(body);
   const hood=new THREE.Mesh(new THREE.BoxGeometry(1.75,.92,3.35),mat(color));hood.position.set(-2.32,2.58,0);model.add(hood);
@@ -177,11 +177,16 @@ function jeep(x,z,color,yaw=0){
   const grill=new THREE.Mesh(new THREE.BoxGeometry(.25,.65,2.5),inkMat);grill.position.set(-3.2,2.12,0);model.add(grill);
   for(const dz of [-1.05,-.35,.35,1.05]){const slot=new THREE.Mesh(new THREE.BoxGeometry(.08,.09,.22),mat(0xd7e6ed));slot.position.set(-3.34,2.05,dz);model.add(slot);}
   for(const side of [-1,1]){const light=new THREE.Mesh(new THREE.BoxGeometry(.18,.35,.45),mat(0xffe1a2));light.position.set(-3.33,2.3,side*1.18);model.add(light);const tail=new THREE.Mesh(new THREE.BoxGeometry(.18,.28,.4),mat(0xc64f43));tail.position.set(3.35,2.2,side*1.2);model.add(tail);}
-  for(let dx of [-2.1,2.1]) for(let dz of [-1.65,1.65]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.86,.86,.58,12),inkMat);wheel.rotation.x=Math.PI/2;wheel.position.set(dx,1.12,dz);model.add(wheel);wheelGroups.push(wheel);}
+  // Cada roda fica num pivô próprio: as dianteiras esterçam e todas giram ao rodar.
+  for(let dx of [-2.1,2.1]) for(let dz of [-1.65,1.65]){
+    const pivot=new THREE.Group();pivot.position.set(dx,1.12,dz);model.add(pivot);
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.86,.86,.58,12),inkMat);wheel.rotation.x=Math.PI/2;pivot.add(wheel);wheelGroups.push(wheel);
+    if(dx<0) frontWheelPivots.push(pivot);
+  }
   const rack=new THREE.Mesh(new THREE.BoxGeometry(2.1,.15,3.2),mat(0x5c6c6b));rack.position.set(.1,4.05,0);model.add(rack);
   for(const side of [-1,1]){const rail=new THREE.Mesh(new THREE.BoxGeometry(2.1,.12,.12),mat(0x5c6c6b));rail.position.set(2.05,3.02,side*1.5);model.add(rail);}
   group.position.set(x,driveHeight(x,z),z);group.rotation.y=yaw-Math.PI/2;model.rotation.order='ZYX';scene.add(group);
-  const v={type:'jeep',group,model,wheelGroups,speed:0,targetSpeed:0,yaw,onBridge:false}; cars.push(v); return v;
+  const v={type:'jeep',group,model,wheelGroups,frontWheelPivots,speed:0,targetSpeed:0,yaw,onBridge:false}; cars.push(v); return v;
 }
 function terrainAttitude(x,z,yaw){const forward=new THREE.Vector2(-Math.sin(yaw),-Math.cos(yaw)),side=new THREE.Vector2(Math.cos(yaw),-Math.sin(yaw)),step=3.5;const front=driveHeight(x+forward.x*step,z+forward.y*step),rear=driveHeight(x-forward.x*step,z-forward.y*step),left=driveHeight(x-side.x*step,z-side.y*step),right=driveHeight(x+side.x*step,z+side.y*step);return {pitch:Math.atan2(front-rear,step*2),roll:Math.atan2(right-left,step*2)};}
 
@@ -374,8 +379,8 @@ function updateObjectives(dt,elapsed){
 
 function spawn(){player.vehicle=null;player.onBridge=false;jumpHeight=0;jumpVelocity=0;updateModeControls();const b=bases[player.team],d=new THREE.Vector2(-b.x,-b.z).normalize();player.pos.set(b.x+d.x*18,height(b.x+d.x*18,b.z+d.y*18)+2,b.z+d.y*18);player.yaw=Math.atan2(-d.x,-d.y);player.pitch=0;showNotice(`TIME ${TEAM_NAMES[player.team]} • BASE PROTEGIDA`);} 
 function enter(){if(player.vehicle){const p=player.vehicle.group.position;if(player.vehicle.type==='heli'&&p.y>height(p.x,p.z)+7){showNotice('DESÇA E POUSE ANTES DE SAIR');return;}let ex=p.x+8,ez=p.z+8;if(blocked(ex,ez)){ex=p.x-8;ez=p.z-8;}player.pos.set(ex,driveHeight(ex,ez,null,height(ex,ez)+2)+2,ez);player.vehicle=null;player.onBridge=false;updateModeControls();return;} let nearest=null,dist=13; for(const v of [...helis,...cars]){const d=player.pos.distanceTo(v.group.position); if(d<dist){dist=d;nearest=v;}} if(nearest){player.vehicle=nearest; player.yaw=nearest.yaw; orbitYaw=0; orbitPitch=.2; updateModeControls(); showNotice(nearest.type==='heli'?'HELICÓPTERO • CONTROLE EM TERCEIRA PESSOA':'PICKUP • CONTROLE EM TERCEIRA PESSOA');} else showNotice('APROXIME-SE DE UM VEÍCULO');}
-const board=document.getElementById('board'); board.addEventListener('click',enter); const action=document.getElementById('action'),verticalControls=document.getElementById('verticalControls');
-function updateModeControls(){const v=player.vehicle; weapon.visible=!v; fireButton.style.display=v?'none':'block'; reloadButton.style.display=v?'none':'block'; weaponHud.style.display=v?'none':'block'; verticalControls.style.display=v?.type==='heli'?'flex':'none'; action.textContent=v?'SAIR':'PULAR'; document.getElementById('modeHint').textContent=v?.type==='heli'?'Analógico: voar e virar • arraste a tela para olhar • ▲ subir / ▼ descer':v?'Analógico: dirigir • arraste a tela para olhar • SAIR para desembarcar':'Analógico: mover • arraste a tela para olhar';}
+const board=document.getElementById('board'); board.addEventListener('click',enter); const action=document.getElementById('action'),verticalControls=document.getElementById('verticalControls'),yawControls=document.getElementById('yawControls');
+function updateModeControls(){const v=player.vehicle; weapon.visible=!v; fireButton.style.display=v?'none':'block'; reloadButton.style.display=v?'none':'block'; weaponHud.style.display=v?'none':'block'; verticalControls.style.display=v?.type==='heli'?'flex':'none'; yawControls.style.display=v?.type==='heli'?'flex':'none'; action.textContent=v?'SAIR':'PULAR'; document.getElementById('modeHint').textContent=v?.type==='heli'?'Analógico: voar • ↶ ↷ girar no próprio eixo • ▲ subir / ▼ descer':v?'Analógico: dirigir • arraste a tela para olhar • SAIR para desembarcar':'Analógico: mover • arraste a tela para olhar';}
 action.addEventListener('click',()=>{if(player.vehicle){enter();return;} if(jumpHeight<=.02) jumpVelocity=10.8;});
 const stickEl=document.getElementById('stick'),nub=document.getElementById('nub'); let stickId=null;
 function updateStick(e){const r=stickEl.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2; let dx=e.clientX-cx,dy=e.clientY-cy; const limit=(r.width-60)/2,magnitude=Math.hypot(dx,dy); if(magnitude>limit){dx=dx/magnitude*limit;dy=dy/magnitude*limit;} stick.x=dx/limit; stick.y=-dy/limit; nub.style.transform=`translate(${dx}px, ${dy}px)`;}
@@ -464,7 +469,7 @@ function animate(){
     // Na pickup, mantém o comportamento de direção que já existia.
     const steerRaw=v.type==='heli'?turn:(turn-side);
     const steer=Math.abs(steerRaw)<.12?0:steerRaw; const thrust=Math.abs(f)<.08?0:f;
-    v.yaw+=steer*dt*(v.type==='heli'?1.08:1.82);
+    v.yaw+=steer*dt*(v.type==='heli'?1.65:1.82);
     v.group.rotation.y=v.yaw-Math.PI/2;
     if(v.type==='heli'){
       v.targetSpeed=thrust*75; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*2.2));
@@ -509,6 +514,9 @@ function animate(){
       v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,roll,1-Math.exp(-dt*9));
       v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,-pitch,1-Math.exp(-dt*9));
       v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,steer*.03,1-Math.exp(-dt*6));
+      // As rodas dianteiras apontam para o mesmo lado em que o carro está esterçando.
+      const wheelSteer=THREE.MathUtils.clamp(steer*.48,-.48,.48);
+      for(const pivot of v.frontWheelPivots) pivot.rotation.y=THREE.MathUtils.lerp(pivot.rotation.y,wheelSteer,1-Math.exp(-dt*10));
       for(const wheel of v.wheelGroups) wheel.rotation.y+=v.speed*dt/.84;
     }
     const orbitAngle=v.yaw+orbitYaw,dist=v.type==='heli'?25:15;
