@@ -91,18 +91,18 @@ function road(a,b,w=11){
 
 for(let i=0;i<3;i++){
   const b=bases[i];
-  road(b,{x:0,z:0},15);
-  road(b,bases[(i+1)%3],12);
   const dir=new THREE.Vector2(-b.x,-b.z).normalize();
-  const p={x:b.x+dir.x*180,z:b.z+dir.y*180};
-  road(b,p,11); road(p,{x:0,z:0},10);
+  // Estradas terminam no anel externo do aeroporto; não atravessam a pista central.
+  const p={x:b.x+dir.x*205,z:b.z+dir.y*205};
+  const q={x:dir.x*188,z:dir.y*188};
+  road(b,p,12); road(p,q,10);
 }
 
 const bridges=[];
 function bridge(z,centerX=-90,length=112,width=18){
-  const x1=centerX-length/2,x2=centerX+length/2,ramp=32,clearance=15;
+  const x1=centerX-length/2,x2=centerX+length/2,ramp=36,clearance=22;
   const leftY=height(x1-ramp,z)+.45,rightY=height(x2+ramp,z)+.45;
-  const deckY=Math.max(height(x1,z),height(x2,z),height(centerX,z)+clearance,leftY+4,rightY+4)+1.2;
+  const deckY=Math.max(height(x1,z),height(x2,z),height(centerX,z)+clearance,leftY+7,rightY+7)+1.2;
   const segments=40,vertices=[],idx=[];
   function elevation(x){if(x<x1){const t=THREE.MathUtils.smoothstep(x,x1-ramp,x1);return THREE.MathUtils.lerp(leftY,deckY,t);}if(x>x2){const t=THREE.MathUtils.smoothstep(x,x2,x2+ramp);return THREE.MathUtils.lerp(deckY,rightY,t);}return deckY;}
   for(let i=0;i<=segments;i++){const x=x1-ramp+(length+2*ramp)*i/segments,y=elevation(x);vertices.push(x,y,z-width/2,x,y,z+width/2);if(i<segments){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
@@ -117,21 +117,29 @@ for(const z of [-320,-130,120,320]) bridge(z);
 
 const groundRay=new THREE.Raycaster();
 function groundSurface(x,z){groundRay.set(new THREE.Vector3(x,600,z),new THREE.Vector3(0,-1,0));const hit=groundRay.intersectObject(terrainMesh,false)[0];return hit?hit.point.y:height(x,z);}
+// Retorna a superfície física apropriada ao nível atual da entidade.
+// A ponte só é escolhida quando a entidade já está nela, está na rampa ou está chegando ao tabuleiro por cima.
 function driveHeight(x,z,entity=null,currentY=null){
-  const ground=groundSurface(x,z); let y=ground;
+  const ground=groundSurface(x,z);
+  const type=entity?.type||'foot';
+  const refY=(currentY ?? entity?.group?.position?.y ?? ground) - (type==='foot'?2:0);
   for(const b of bridges){
-    if(!(x>=b.x1&&x<=b.x2&&Math.abs(z-b.z)<b.width*.52)) continue;
-    const deck=b.elevation(x), inCore=x>=b.core1&&x<=b.core2, onRamp=!inCore;
-    const refY=currentY ?? (entity?.group?.position?.y ?? ground);
-    if(entity?.type==='heli') return ground;
-    if(onRamp){ if(entity) entity.onBridge=true; return Math.max(ground,deck); }
-    const takeTop=(entity?.onBridge) || refY>deck-3.8;
-    if(takeTop){ if(entity) entity.onBridge=true; return Math.max(ground,deck); }
+    if(!(x>=b.x1&&x<=b.x2&&Math.abs(z-b.z)<b.width*.54)) continue;
+    const deck=b.elevation(x);
+    const onRamp=x<b.core1||x>b.core2;
+    const closeToDeck=type==='heli' ? (refY>=deck+2.0 && refY-deck<10) : Math.abs(refY-deck)<4.5;
+    const enteredRamp=onRamp && Math.abs(ground-deck)<3.2;
+    const alreadyOn=!!entity?.onBridge;
+    const heliLanding=type==='heli' && refY>=deck+2.0;
+    if(alreadyOn||closeToDeck||enteredRamp||heliLanding){
+      if(entity) entity.onBridge=true;
+      return Math.max(ground,deck);
+    }
     if(entity) entity.onBridge=false;
     return ground;
   }
-  if(entity && entity.type!=='heli') entity.onBridge=false;
-  return y;
+  if(entity) entity.onBridge=false;
+  return ground;
 }
 
 const tower=(x,z,c=ink)=>{const y=height(x,z);box(x,y+13,z,5,26,5,c);box(x,y+28,z,12,5,12,0xfaf5e8);box(x,y+32,z,1,8,1,c);};
@@ -194,64 +202,81 @@ for(let i=0;i<8;i++){const a=i*Math.PI/4,r=112,x=r*Math.cos(a),z=r*Math.sin(a); 
 
 const placeOutpost=(x,z,accent)=>{for(let k=0;k<4;k++){const dx=(k%2)*25-12,dz=Math.floor(k/2)*24-12;if(bases.every(b=>Math.hypot(x+dx-b.x,z+dz-b.z)>112)) building(x+dx,z+dz,accent,12+(k%2)*4,11);} tower(x+34,z-28,accent); for(let k=0;k<5;k++){const xx=x-32+(k%3)*14,zz=z+38+Math.floor(k/3)*12; box(xx,height(xx,zz)+2,zz,7,4,7,0xa99b82);}};
 
-for(const [x,z,c] of [[-325,-220,0x6688a4],[290,-250,0xb39b74],[0,365,0x759588],[-360,85,0x8e9c84],[365,55,0x9e917f],[10,-340,0xa29a84],[40,195,0xabb4bb]]) placeOutpost(x,z,c);
+for(const [x,z,c] of [[-350,-90,0x6688a4],[350,-80,0xb39b74],[-340,250,0x759588],[350,245,0x8e9c84],[-120,-430,0x9e917f],[135,430,0xa29a84]]) placeOutpost(x,z,c);
 
 function flatLevel(x,z){return height(x,z);} 
 function crate(x,z,w=6,h=6,d=6,c=0x9f815e){box(x,flatLevel(x,z)+h/2,z,w,h,d,c);} 
 function oilField(x,z){
-  const y=flatLevel(x,z); box(x,y+.9,z,86,1.8,72,0xa39179);
+  const y=flatLevel(x,z); box(x,y+.9,z,112,1.8,94,0xa39179);
   for(const [dx,dz,r] of [[-18,-10,10],[18,-10,10],[0,15,13]]){cylinder(x+dx,y+8,z+dz,r,16,0xcfc9be,18); cylinder(x+dx,y+16.8,z+dz,r+.4,.8,0x9d998f,18);} 
   for(let i=0;i<8;i++){const dx=-30+(i%4)*11,dz=25+Math.floor(i/4)*9; cylinder(x+dx,y+2.3,z+dz,1.9,4.6,0x5b78a1,10);} 
   line([[x-25,y+11,z-10],[x,y+11,z+15],[x+18,y+11,z-10]],0x6c7077,.6); 
   building(x-35,z-20,0x8d7d68,16,12); tower(x+34,z-22,0x7b6f61);
 }
 function cargoYard(x,z){
-  const y=flatLevel(x,z); box(x,y+.8,z,92,1.6,76,0xa38f73);
+  const y=flatLevel(x,z); box(x,y+.8,z,118,1.6,98,0xa38f73);
   const cs=[0xc96a4b,0x5a84b1,0x9a7453,0x6e8c54];
   for(let r=0;r<3;r++) for(let c=0;c<4;c++){const xx=x-28+c*16,zz=z-18+r*16; const h=(c+r)%2?6:12; crate(xx,zz,13,h,7,cs[(r+c)%cs.length]); if(h>6) crate(xx,zz+7.5,13,6,7,cs[(r+c+1)%cs.length]);}
   building(x+30,z-18,0x7d8794,18,14); box(x+34,y+5,z+20,10,10,16,0xb7b09e); tower(x-36,z+22,0x6b7788);
 }
 function scrapYard(x,z){
-  const y=flatLevel(x,z); box(x,y+.75,z,82,1.5,64,0x9f927d);
+  const y=flatLevel(x,z); box(x,y+.75,z,110,1.5,88,0x9f927d);
   building(x-24,z-15,0x8f7c63,18,13); 
   for(let i=0;i<14;i++){const xx=x-28+(i%5)*13,zz=z+8+Math.floor(i/5)*11; const pieces=box(xx,y+2.2+(i%3),zz,8,4+(i%3)*1.6,5, i%2?0x8b5f49:0x707780); pieces.rotation.y=(i%3)*.35;}
   for(const [dx,dz] of [[20,12],[29,18],[17,24]]){const tire=new THREE.Mesh(new THREE.TorusGeometry(2.2,.8,6,10),inkMat); tire.rotation.y=Math.PI/2; tire.position.set(x+dx,y+2.5,z+dz); scene.add(tire);} 
   tower(x+30,z-20,0x7c6c59);
 }
 function powerStation(x,z){
-  const y=flatLevel(x,z); box(x,y+.8,z,84,1.6,68,0x9ea38f);
+  const y=flatLevel(x,z); box(x,y+.8,z,108,1.6,88,0x9ea38f);
   building(x-24,z,0x8f9aa0,16,12); building(x+28,z-8,0x9c8f7c,14,12);
   for(const [dx,dz] of [[-8,-16],[10,-16],[-8,12],[10,12]]){box(x+dx,y+4.5,z+dz,6,9,6,0xb1a891); box(x+dx,y+10.2,z+dz,8,1.3,8,0x7a6f63);} 
   for(const dx of [-30,0,30]){const gy=flatLevel(x+dx,z+26); box(x+dx,gy+12,z+26,2.1,24,2.1,0x6b737a); box(x+dx,gy+23,z+26,10,1,1,0x6b737a);} 
 }
 function airstrip(x,z){
   const y=flatLevel(x,z);
-  box(x,y+.08,z,92,.18,280,0x726b65);
-  box(x,y+.16,z,2,.16,250,0xe9e3d5);
-  for(let i=0;i<12;i++) box(x,y+.17,z-108+i*20,2.2,.18,9,0xe9e3d5);
-  for(const sx of [-34,34]){for(let i=0;i<6;i++) box(x+sx,y+.16,z-92+i*34,12,.16,2,0xe9e3d5);} 
+  box(x,y+.08,z,104,.18,290,0x686b6b);
+  box(x,y+.17,z,112,.12,298,0xc0b9aa); box(x,y+.24,z,104,.18,290,0x686b6b);
+  box(x,y+.28,z,2.2,.12,252,0xf3eee2);
+  for(let i=0;i<12;i++) box(x,y+.29,z-110+i*20,2.4,.12,9,0xf3eee2);
+  for(const sx of [-38,38]){for(let i=0;i<6;i++) box(x+sx,y+.29,z-94+i*34,13,.12,2,0xf3eee2);} 
   box(x-72,y+10,z-64,42,20,28,0xd7d0c2); box(x-72,y+20.8,z-64,44,1.6,30,0x8da4b5); // hangar
   box(x+78,y+7,z-54,22,14,18,0xe4ded2); box(x+78,y+14.5,z-54,24,1.2,20,0x7f95a6); // office
+  // Pátio de taxiamento e estacionamento lateral, separado da faixa de pouso.
+  box(x-92,y+.16,z+32,46,.18,100,0x777875);
+  box(x-92,y+.27,z+32,1.1,.12,92,0xe9e3d5);
+  for(let i=0;i<5;i++) box(x-112+i*9,y+.29,z+30,1,.12,34,0xe9e3d5);
   tower(x+86,z+82,0x7388a0);
   for(const px of [-56,-32,-8,16,40]){crate(x+px,z-86,7,3,7,0x9b8260);} 
+  // Aeronave cargueira grande e estilizada: silhueta mais proporcional e cobertura útil.
   const plane=new THREE.Group();
-  const fuselage=new THREE.Mesh(new THREE.CapsuleGeometry(3.1,26,6,14),mat(0xe7e2d8)); fuselage.rotation.z=Math.PI/2; plane.add(fuselage);
-  const cockpit=new THREE.Mesh(new THREE.SphereGeometry(3.15,14,10),mat(0x9fb4c4)); cockpit.scale.set(1.15,.92,.92); cockpit.position.x=-15; plane.add(cockpit);
-  const wing=new THREE.Mesh(new THREE.BoxGeometry(18,.6,34),mat(0x6c89a8)); wing.position.set(-1.5,.6,0); plane.add(wing);
-  const tailWing=new THREE.Mesh(new THREE.BoxGeometry(8,.36,16),mat(0x6c89a8)); tailWing.position.set(12,4.8,0); plane.add(tailWing);
-  const fin=new THREE.Mesh(new THREE.BoxGeometry(2.2,8,5),mat(0x6c89a8)); fin.position.set(14,7.6,0); plane.add(fin);
-  for(const ex of [-7,3]) for(const ez of [-9,9]){const eng=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.35,4.8,12),mat(0x87939c)); eng.rotation.z=Math.PI/2; eng.position.set(ex,-1.2,ez); plane.add(eng);} 
-  for(const gx of [-10,4,12]){for(const gz of gx===12?[0]:[-6,6]){const strut=new THREE.Mesh(new THREE.BoxGeometry(.45,3.6,.45),mat(0x626a71)); strut.position.set(gx,-4.4,gz); plane.add(strut); const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.3,.9,12),inkMat); wheel.rotation.z=Math.PI/2; wheel.position.set(gx,-6.3,gz); plane.add(wheel);}}
-  plane.position.set(x+8,y+8.5,z+58); plane.rotation.y=Math.PI/2; scene.add(plane);
+  const fuselage=new THREE.Mesh(new THREE.CapsuleGeometry(3.7,39,7,16),mat(0xe7e2d8)); fuselage.rotation.z=Math.PI/2; plane.add(fuselage);
+  const belly=new THREE.Mesh(new THREE.CylinderGeometry(3.45,3.45,40,14),mat(0xd4d2cc)); belly.rotation.z=Math.PI/2; plane.add(belly);
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(3.7,16,12),mat(0xe7e2d8)); nose.scale.set(1.35,.92,.92); nose.position.x=-22; plane.add(nose);
+  const cockpit=new THREE.Mesh(new THREE.SphereGeometry(2.8,14,10),mat(0x476b83)); cockpit.scale.set(1.25,.65,1.2); cockpit.position.set(-21,2.05,0); plane.add(cockpit);
+  for(let i=0;i<7;i++){const win=new THREE.Mesh(new THREE.BoxGeometry(.22,.65,1.25),mat(0x486b82));win.position.set(-15+i*4.1,2.45,3.45);plane.add(win);const win2=win.clone();win2.position.z=-3.45;plane.add(win2);}
+  const wing=new THREE.Mesh(new THREE.BoxGeometry(24,.85,48),mat(0x6c89a8)); wing.position.set(-1,.25,0); plane.add(wing);
+  const wingEdge=new THREE.Mesh(new THREE.BoxGeometry(22,.25,45),mat(0x8b9fb0)); wingEdge.position.set(-1,.76,0); plane.add(wingEdge);
+  const tailWing=new THREE.Mesh(new THREE.BoxGeometry(9,.55,20),mat(0x6c89a8)); tailWing.position.set(18,4.5,0); plane.add(tailWing);
+  const fin=new THREE.Mesh(new THREE.BoxGeometry(2.6,10,6.5),mat(0x6c89a8)); fin.position.set(19,7.3,0); plane.add(fin);
+  for(const ex of [-9,7]) for(const ez of [-14,14]){
+    const nacelle=new THREE.Mesh(new THREE.CylinderGeometry(1.75,1.9,6.5,14),mat(0x7b858d)); nacelle.rotation.z=Math.PI/2; nacelle.position.set(ex,-1.05,ez); plane.add(nacelle);
+    const intake=new THREE.Mesh(new THREE.CircleGeometry(1.35,14),mat(0x303c46)); intake.position.set(ex-3.28,-1.05,ez); intake.rotation.y=-Math.PI/2; plane.add(intake);
+  }
+  for(const gx of [-15,1,16]){for(const gz of gx===16?[0]:[-7,7]){
+    const strut=new THREE.Mesh(new THREE.BoxGeometry(.55,3.5,.55),mat(0x626a71)); strut.position.set(gx,-3.65,gz); plane.add(strut);
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,.85,14),inkMat); wheel.rotation.z=Math.PI/2; wheel.position.set(gx,-5.55,gz); plane.add(wheel);
+  }}
+  plane.position.set(x+8,y+6.6,z+52); plane.rotation.y=Math.PI/2; scene.add(plane);
+  obstacles.push({x:x+8,z:z+52,w:58,d:48});
   // wing and fuselage as cover references nearby
   for(const [dx,dz] of [[-22,44],[-6,74],[18,44],[30,74]]) crate(x+dx,z+dz,9,4,9,0x8f7b61);
 }
 
 // 5 setores temáticos para referência visual no mapa.
-oilField(-520,-90);
-cargoYard(520,-180);
-scrapYard(-430,410);
-powerStation(430,390);
+oilField(-500,-300);
+cargoYard(500,-300);
+scrapYard(-500,360);
+powerStation(500,360);
 airstrip(0,0);
 for(let i=0;i<70;i++){const x=((i*181+89)%1010)-505,z=((i*233+91)%1020)-510;if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<115)||Math.hypot(x,z)<85) continue; const y=height(x,z),r=3+i%5; const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),mat(i%3?0xd2c8b3:0xbeb6a6)); rock.position.set(x,y+r*.32,z); rock.scale.y=1.2+(i%4)*.32; scene.add(rock);} 
 // Water is a flat ribbon just above the excavated riverbed, never a raised tube.
@@ -392,14 +417,18 @@ function animate(){
     v.group.position.x=THREE.MathUtils.clamp(v.group.position.x,-580,580); v.group.position.z=THREE.MathUtils.clamp(v.group.position.z,-580,580);
     if(v.type==='heli'){
       v.group.position.y+=v.vertical*dt;
-      v.group.position.y=Math.max(groundSurface(v.group.position.x,v.group.position.z)+5,Math.min(230,v.group.position.y));
+      const heliGround=groundSurface(v.group.position.x,v.group.position.z);
+      const heliSurface=driveHeight(v.group.position.x,v.group.position.z,v,v.group.position.y);
+      const landingY=heliSurface>heliGround+2?heliSurface+3.45:heliGround+5;
+      v.group.position.y=Math.max(landingY,Math.min(230,v.group.position.y));
       v.rotor.rotation.y+=dt*18; v.tailRotor.rotation.z+=dt*31;
       // Powerful visible tilt with gentle easing; pitching at forward/backward input,
       // banking on lateral control. Visual only, without aircraft rigid-body solver.
-      const bank=THREE.MathUtils.clamp(steer*.72,-.72,.72);
-      const pitch=THREE.MathUtils.clamp(-thrust*.36+v.vertical/35*.03,-.40,.40);
-      v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,pitch,1-Math.exp(-dt*3.6));
-      v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,bank,1-Math.exp(-dt*3.4));
+      const bank=THREE.MathUtils.clamp(steer*.68,-.68,.68);
+      const pitch=THREE.MathUtils.clamp(-thrust*.34+v.vertical/35*.025,-.36,.36);
+      // O corpo aponta ao longo do eixo X local: roll em X, nariz para cima/baixo em Z.
+      v.model.rotation.x=THREE.MathUtils.lerp(v.model.rotation.x,bank,1-Math.exp(-dt*3.6));
+      v.model.rotation.z=THREE.MathUtils.lerp(v.model.rotation.z,pitch,1-Math.exp(-dt*3.4));
       v.model.rotation.y=THREE.MathUtils.lerp(v.model.rotation.y,0,1-Math.exp(-dt*4.0));
     }else{
       const xx=v.group.position.x,zz=v.group.position.z,ang=terrainAttitude(xx,zz,v.yaw);
@@ -407,7 +436,7 @@ function animate(){
       const samples=[];for(const fx of [-2.1,2.1])for(const rz of [-1.65,1.65])samples.push(driveHeight(xx+fw.x*fx+rt.x*rz,zz+fw.y*fx+rt.y*rz,v,v.group.position.y));
       const avg=samples.reduce((a,b)=>a+b,0)/4;
       const frontAvg=(samples[2]+samples[3])*.5,rearAvg=(samples[0]+samples[1])*.5,leftAvg=(samples[0]+samples[2])*.5,rightAvg=(samples[1]+samples[3])*.5;
-      const targetY=Math.max(avg+.95,Math.max(...samples)+.2);
+      const targetY=Math.max(avg+.35,Math.max(...samples)+.12);
       v.group.position.y=THREE.MathUtils.lerp(v.group.position.y,targetY,1-Math.exp(-dt*16));
       const pitch=THREE.MathUtils.clamp(Math.atan2(frontAvg-rearAvg,4.2),-.30,.30);
       const roll=THREE.MathUtils.clamp(Math.atan2(rightAvg-leftAvg,3.3),-.26,.26);
@@ -427,8 +456,20 @@ function animate(){
     if(!blocked(nextX,player.pos.z)) player.pos.x=nextX;
     if(!blocked(player.pos.x,nextZ)) player.pos.z=nextZ;
     player.pos.x=THREE.MathUtils.clamp(player.pos.x,-580,580); player.pos.z=THREE.MathUtils.clamp(player.pos.z,-580,580);
-    jumpVelocity-=26*dt; jumpHeight=Math.max(0,jumpHeight+jumpVelocity*dt); if(jumpHeight===0) jumpVelocity=0;
-    player.pos.y=driveHeight(player.pos.x,player.pos.z,{type:'foot',onBridge:player.onBridge},player.pos.y)+2+jumpHeight; player.onBridge=(player.pos.y-jumpHeight)>groundSurface(player.pos.x,player.pos.z)+2.5;
+    const footEntity={type:'foot',onBridge:player.onBridge};
+    const surface=driveHeight(player.pos.x,player.pos.z,footEntity,player.pos.y);
+    let feetY=player.pos.y-2;
+    if(feetY>surface+.04){
+      jumpVelocity-=26*dt;
+      feetY+=jumpVelocity*dt;
+      if(feetY<=surface){feetY=surface;jumpVelocity=0;}
+    }else{
+      feetY=surface;
+      if(jumpVelocity<0) jumpVelocity=0;
+    }
+    jumpHeight=Math.max(0,feetY-surface);
+    player.pos.y=feetY+2;
+    player.onBridge=!!footEntity.onBridge;
     camera.position.copy(player.pos); camera.rotation.order='YXZ'; camera.rotation.y=player.yaw; camera.rotation.x=player.pitch;
   }
 
