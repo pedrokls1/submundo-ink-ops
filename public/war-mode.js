@@ -294,15 +294,35 @@ for(let i=0;i<=240;i++){
 }
 const waterGeo=new THREE.BufferGeometry();waterGeo.setAttribute('position',new THREE.Float32BufferAttribute(waterVertices,3));waterGeo.setIndex(waterIndices);waterGeo.computeVertexNormals();
 const waterMesh=new THREE.Mesh(waterGeo,new THREE.MeshLambertMaterial({color:0x67b7cb,transparent:true,opacity:.87,side:THREE.DoubleSide,depthWrite:false}));scene.add(waterMesh);
-for(let i=0;i<340;i++){const x=((i*97+23)%1140)-570,z=((i*317+7)%1140)-570;const nearBase=bases.some(b=>Math.hypot(x-b.x,z-b.z)<96);if(nearBase||Math.hypot(x,z)<78||Math.abs(x+90-22*Math.sin(z*.013))<17) continue; const h=height(x,z); if(h>130) continue; const tall=7+(i%5)*2.2; cylinder(x,h+2,z,1.8,4,0x8a745d,5); const canopy=new THREE.Mesh(new THREE.ConeGeometry(5+(i%3),tall,6),treeMat); canopy.position.set(x,h+4+tall*.46,z); scene.add(canopy);} 
-// matinhos pintados para dar mais vida ao terreno
+// Árvores maiores, com copas arredondadas e irregulares em vez de cones pontudos.
+const canopyMats=[mat(0x557f45),mat(0x668e4c),mat(0x759955),mat(0x4f7541)];
+for(let i=0;i<340;i++){
+  const x=((i*97+23)%1140)-570,z=((i*317+7)%1140)-570;
+  const nearBase=bases.some(b=>Math.hypot(x-b.x,z-b.z)<96);
+  if(nearBase||Math.hypot(x,z)<78||Math.abs(x+90-22*Math.sin(z*.013))<17) continue;
+  const h=height(x,z); if(h>130) continue;
+  const tall=10+(i%5)*2.5, crownW=6.3+(i%4)*1.15;
+  cylinder(x,h+tall*.26,z,1.25+(i%3)*.18,tall*.55,0x8a745d,7);
+  const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1,1),canopyMats[i%canopyMats.length]);
+  crown.position.set(x,h+tall*.72,z); crown.scale.set(crownW,tall*.52,crownW*(.86+(i%3)*.08)); crown.rotation.y=(i*.83)%Math.PI; scene.add(crown);
+  // Uma copa menor integrada à principal dá volume de árvore, sem dezenas de objetos extras.
+  if(i%3!==0){const upper=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),canopyMats[(i+1)%canopyMats.length]);upper.position.set(x+(i%2?1.5:-1.5),h+tall*.91,z+(i%4-1.5));upper.scale.set(crownW*.62,tall*.34,crownW*.58);scene.add(upper);}
+}
+// Touceiras de folhas afiladas e curvas; geometria triangular leve, sem os antigos blocos retangulares.
+const grassMats=[mat(0x668b49),mat(0x789b54),mat(0x527b40),mat(0x8b9d59)];
 for(let i=0;i<180;i++){
   const x=((i*131+57)%1120)-560,z=((i*281+39)%1120)-560;
-  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72) continue;
+  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72||Math.abs(x+90-22*Math.sin(z*.013))<16) continue;
   const y=groundSurface(x,z); if(y>110) continue;
-  const tuft=new THREE.Group();
-  for(const a of [0,Math.PI/3,-Math.PI/3]){const blade=new THREE.Mesh(new THREE.BoxGeometry(.35,3.6,.18),mat(0x5e9548));blade.position.y=1.8;blade.rotation.z=a;tuft.add(blade);} 
-  tuft.position.set(x,y+.2,z); tuft.rotation.y=(i*.61)%Math.PI; scene.add(tuft);
+  const positions=[];
+  for(let j=0;j<4;j++){
+    const a=j*Math.PI*.5+(i%7)*.13, lean=.45+(j%2)*.3, ht=1.6+(i%4)*.38;
+    const bx=Math.cos(a)*.12,bz=Math.sin(a)*.12,tx=Math.cos(a)*lean,tz=Math.sin(a)*lean;
+    const wx=Math.cos(a+Math.PI/2)*.20,wz=Math.sin(a+Math.PI/2)*.20;
+    positions.push(bx-wx,0,bz-wz, bx+wx,0,bz+wz, tx,ht,tz);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.computeVertexNormals();
+  const tuft=new THREE.Mesh(g,grassMats[i%grassMats.length]);tuft.material.side=THREE.DoubleSide;tuft.position.set(x,y+.12,z);tuft.rotation.y=(i*.61)%Math.PI;scene.add(tuft);
 }
 
 const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null,onBridge:false};
@@ -410,19 +430,24 @@ function initEngineAudio(){
     const master=ctx.createGain(); master.gain.value=.42; master.connect(ctx.destination);
     const makeEngine=(type)=>{
       const bus=ctx.createGain(); bus.gain.value=0; bus.connect(master);
-      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=type==='heli'?1250:700; filter.Q.value=.65; filter.connect(bus);
+      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=type==='heli'?560:700; filter.Q.value=.65; filter.connect(bus);
       const osc1=ctx.createOscillator(), osc2=ctx.createOscillator(), sub=ctx.createOscillator();
       osc1.type='sawtooth'; osc2.type='triangle'; sub.type='sawtooth';
       const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
-      g1.gain.value=type==='heli'?.17:.20; g2.gain.value=type==='heli'?.12:.10; g3.gain.value=.14;
+      g1.gain.value=type==='heli'?.035:.20; g2.gain.value=type==='heli'?.075:.10; g3.gain.value=type==='heli'?.025:.14;
       osc1.connect(g1);osc2.connect(g2);sub.connect(g3);g1.connect(filter);g2.connect(filter);g3.connect(filter);
       osc1.start();osc2.start();sub.start();
-      let lfo=null,lfoGain=null;
+      let lfo=null,bladeOsc=null,bladeGain=null,bladeLfo=null;
       if(type==='heli'){
-        lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=17;
-        lfoGain=ctx.createGain();lfoGain.gain.value=.035;lfo.connect(lfoGain);lfoGain.connect(bus.gain);lfo.start();
+        // Pulsos graves e regulares simulam as pás: tu-tu-tu-tu, não um motor de moto acelerando.
+        bladeOsc=ctx.createOscillator();bladeOsc.type='triangle';bladeOsc.frequency.value=92;
+        bladeGain=ctx.createGain();bladeGain.gain.value=.07;bladeOsc.connect(bladeGain);bladeGain.connect(filter);bladeOsc.start();
+        bladeLfo=ctx.createOscillator();bladeLfo.type='square';bladeLfo.frequency.value=4.7;
+        const bladeMod=ctx.createGain();bladeMod.gain.value=.052;bladeLfo.connect(bladeMod);bladeMod.connect(bladeGain.gain);bladeLfo.start();
+        lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=4.7;
+        const bodyPulse=ctx.createGain();bodyPulse.gain.value=.025;lfo.connect(bodyPulse);bodyPulse.connect(bus.gain);lfo.start();
       }
-      return {type,bus,filter,osc1,osc2,sub,lfo};
+      return {type,bus,filter,osc1,osc2,sub,lfo,bladeOsc,bladeGain,bladeLfo};
     };
     engineAudio={ctx,master,car:makeEngine('car'),heli:makeEngine('heli')};
     return engineAudio;
@@ -440,13 +465,14 @@ function updateEngineAudio(vehicle,dt){
     const vertical=isActive&&e.type==='heli'?Math.min(1,Math.max(0,active.vertical||0)/35):0;
     const idle=e.type==='heli'?.13:.075;
     // O helicóptero ganha mais volume e rotação quando sobe, sem soar como carro.
-    const target=isActive?(idle+speed*(e.type==='heli'?.19:.23)+vertical*(e.type==='heli'?.16:.035)):0;
+    const target=isActive?(e.type==='heli'?(idle+speed*.065+vertical*.23):(idle+speed*.23)):0;
     e.bus.gain.setTargetAtTime(target,now,.12);
-    const rpm=e.type==='heli'? (38+speed*42+vertical*15):(42+speed*92);
+    const rpm=e.type==='heli'? (34+speed*8+vertical*5):(42+speed*92);
     e.osc1.frequency.setTargetAtTime(rpm,now,.10);
     e.osc2.frequency.setTargetAtTime(rpm*1.51,now,.10);
     e.sub.frequency.setTargetAtTime(rpm*.5,now,.12);
-    e.filter.frequency.setTargetAtTime(e.type==='heli'?850+speed*1100:380+speed*1500,now,.15);
+    e.filter.frequency.setTargetAtTime(e.type==='heli'?520+speed*180+vertical*120:380+speed*1500,now,.15);
+    if(e.type==='heli'&&e.bladeOsc) e.bladeOsc.frequency.setTargetAtTime(88+speed*8+vertical*4,now,.22);
   }
 }
 
