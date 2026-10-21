@@ -430,20 +430,20 @@ function initEngineAudio(){
     const master=ctx.createGain(); master.gain.value=.42; master.connect(ctx.destination);
     const makeEngine=(type)=>{
       const bus=ctx.createGain(); bus.gain.value=0; bus.connect(master);
-      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=type==='heli'?560:700; filter.Q.value=.65; filter.connect(bus);
+      const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=type==='heli'?1400:700; filter.Q.value=.65; filter.connect(bus);
       const osc1=ctx.createOscillator(), osc2=ctx.createOscillator(), sub=ctx.createOscillator();
       osc1.type='sawtooth'; osc2.type='triangle'; sub.type='sawtooth';
       const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
-      g1.gain.value=type==='heli'?.035:.20; g2.gain.value=type==='heli'?.075:.10; g3.gain.value=type==='heli'?.025:.14;
+      g1.gain.value=type==='heli'?.24:.20; g2.gain.value=type==='heli'?.30:.10; g3.gain.value=type==='heli'?.12:.14;
       osc1.connect(g1);osc2.connect(g2);sub.connect(g3);g1.connect(filter);g2.connect(filter);g3.connect(filter);
       osc1.start();osc2.start();sub.start();
       let lfo=null,bladeOsc=null,bladeGain=null,bladeLfo=null;
       if(type==='heli'){
         // Pulsos graves e regulares simulam as pás: tu-tu-tu-tu, não um motor de moto acelerando.
         bladeOsc=ctx.createOscillator();bladeOsc.type='triangle';bladeOsc.frequency.value=92;
-        bladeGain=ctx.createGain();bladeGain.gain.value=.07;bladeOsc.connect(bladeGain);bladeGain.connect(filter);bladeOsc.start();
+        bladeGain=ctx.createGain();bladeGain.gain.value=.25;bladeOsc.connect(bladeGain);bladeGain.connect(filter);bladeOsc.start();
         bladeLfo=ctx.createOscillator();bladeLfo.type='square';bladeLfo.frequency.value=4.7;
-        const bladeMod=ctx.createGain();bladeMod.gain.value=.052;bladeLfo.connect(bladeMod);bladeMod.connect(bladeGain.gain);bladeLfo.start();
+        const bladeMod=ctx.createGain();bladeMod.gain.value=.12;bladeLfo.connect(bladeMod);bladeMod.connect(bladeGain.gain);bladeLfo.start();
         lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=4.7;
         const bodyPulse=ctx.createGain();bodyPulse.gain.value=.025;lfo.connect(bodyPulse);bodyPulse.connect(bus.gain);lfo.start();
       }
@@ -463,15 +463,15 @@ function updateEngineAudio(vehicle,dt){
     const isActive=!!active&&(e.type==='heli'?active.type==='heli':active.type==='jeep');
     const speed=isActive?Math.min(1,Math.abs(active.speed||0)/(e.type==='heli'?75:38)):0;
     const vertical=isActive&&e.type==='heli'?Math.min(1,Math.max(0,active.vertical||0)/35):0;
-    const idle=e.type==='heli'?.13:.075;
+    const idle=e.type==='heli'?.28:.075;
     // O helicóptero ganha mais volume e rotação quando sobe, sem soar como carro.
-    const target=isActive?(e.type==='heli'?Math.min(.92,(idle+speed*.065+vertical*.23)*1.44*2.5):(idle+speed*.23)):0;
+    const target=isActive?(e.type==='heli'?Math.min(.98,(idle+speed*.10+vertical*.30)*1.65*2.5):(idle+speed*.23)):0;
     e.bus.gain.setTargetAtTime(target,now,.12);
     const rpm=e.type==='heli'? (34+speed*8+vertical*5):(42+speed*92);
     e.osc1.frequency.setTargetAtTime(rpm,now,.10);
     e.osc2.frequency.setTargetAtTime(rpm*1.51,now,.10);
     e.sub.frequency.setTargetAtTime(rpm*.5,now,.12);
-    e.filter.frequency.setTargetAtTime(e.type==='heli'?520+speed*180+vertical*120:380+speed*1500,now,.15);
+    e.filter.frequency.setTargetAtTime(e.type==='heli'?1400+speed*500+vertical*300:380+speed*1500,now,.15);
     if(e.type==='heli'&&e.bladeOsc) e.bladeOsc.frequency.setTargetAtTime(88+speed*8+vertical*4,now,.22);
   }
 }
