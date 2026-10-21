@@ -432,11 +432,12 @@ function updateEngineAudio(vehicle,dt){
   for(const e of [a.car,a.heli]){
     const isActive=!!active&&(e.type==='heli'?active.type==='heli':active.type==='jeep');
     const speed=isActive?Math.min(1,Math.abs(active.speed||0)/(e.type==='heli'?75:38)):0;
-    const vertical=isActive&&e.type==='heli'?Math.min(1,Math.abs(active.vertical||0)/35):0;
+    const vertical=isActive&&e.type==='heli'?Math.min(1,Math.max(0,active.vertical||0)/35):0;
     const idle=e.type==='heli'?.13:.075;
-    const target=isActive?(idle+speed*(e.type==='heli'?.19:.23)+vertical*.035):0;
+    // O helicóptero ganha mais volume e rotação quando sobe, sem soar como carro.
+    const target=isActive?(idle+speed*(e.type==='heli'?.19:.23)+vertical*(e.type==='heli'?.16:.035)):0;
     e.bus.gain.setTargetAtTime(target,now,.12);
-    const rpm=e.type==='heli'? (38+speed*42+vertical*5):(42+speed*92);
+    const rpm=e.type==='heli'? (38+speed*42+vertical*15):(42+speed*92);
     e.osc1.frequency.setTargetAtTime(rpm,now,.10);
     e.osc2.frequency.setTargetAtTime(rpm*1.51,now,.10);
     e.sub.frequency.setTargetAtTime(rpm*.5,now,.12);
@@ -459,14 +460,24 @@ function animate(){
 
   if(v){
     const turn=(Number(!!keys.e)-Number(!!keys.q));
-    const steerRaw=(turn-side); const steer=Math.abs(steerRaw)<.12?0:steerRaw; const thrust=Math.abs(f)<.08?0:f;
+    // No helicóptero, o lateral desloca a aeronave; Q/E faz a guinada.
+    // Na pickup, mantém o comportamento de direção que já existia.
+    const steerRaw=v.type==='heli'?turn:(turn-side);
+    const steer=Math.abs(steerRaw)<.12?0:steerRaw; const thrust=Math.abs(f)<.08?0:f;
     v.yaw+=steer*dt*(v.type==='heli'?1.08:1.82);
     v.group.rotation.y=v.yaw-Math.PI/2;
     if(v.type==='heli'){
       v.targetSpeed=thrust*75; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*2.2));
       v.targetVertical=(Number(!!keys[' '])-Number(!!keys.shift))*35; v.vertical=THREE.MathUtils.lerp(v.vertical,v.targetVertical,Math.min(1,dt*2.4));
-    }else{v.targetSpeed=f*38; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*3.2));}
-    v.group.position.x+=-Math.sin(v.yaw)*v.speed*dt; v.group.position.z+=-Math.cos(v.yaw)*v.speed*dt;
+      v.targetLateral=side*25;
+      v.lateral=THREE.MathUtils.lerp(v.lateral||0,v.targetLateral,1-Math.exp(-dt*2.0));
+      // Avanço/recuo e deslocamento lateral são independentes.
+      v.group.position.x+=(-Math.sin(v.yaw)*v.speed+Math.cos(v.yaw)*v.lateral)*dt;
+      v.group.position.z+=(-Math.cos(v.yaw)*v.speed-Math.sin(v.yaw)*v.lateral)*dt;
+    }else{
+      v.targetSpeed=f*38; v.speed=THREE.MathUtils.lerp(v.speed,v.targetSpeed,Math.min(1,dt*3.2));
+      v.group.position.x+=-Math.sin(v.yaw)*v.speed*dt; v.group.position.z+=-Math.cos(v.yaw)*v.speed*dt;
+    }
     v.group.position.x=THREE.MathUtils.clamp(v.group.position.x,-580,580); v.group.position.z=THREE.MathUtils.clamp(v.group.position.z,-580,580);
     if(v.type==='heli'){
       v.group.position.y+=v.vertical*dt;
@@ -477,7 +488,7 @@ function animate(){
       v.rotor.rotation.y+=dt*18; v.tailRotor.rotation.z+=dt*31;
       // Powerful visible tilt with gentle easing; pitching at forward/backward input,
       // banking on lateral control. Visual only, without aircraft rigid-body solver.
-      const bank=THREE.MathUtils.clamp(steer*.68,-.68,.68);
+      const bank=THREE.MathUtils.clamp(-side*.68,-.68,.68);
       // O nariz estava levantando ao acelerar. Inverter o sinal faz o comando
       // para frente baixar o nariz; o controle lateral permanece independente.
       const pitch=THREE.MathUtils.clamp(thrust*.34-v.vertical/35*.025,-.36,.36);
