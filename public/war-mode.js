@@ -21,7 +21,7 @@ const ink=0x24466e, paper=0xf5f0e3;
 const mat=(c)=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
 const treeMat=mat(0x5b8c48),trunkMat=mat(0x8a745d),inkMat=mat(ink),whiteMat=mat(paper),waterMat=new THREE.MeshLambertMaterial({color:0x79bfd4,flatShading:true});
 
-const flatZones=[[-325,-220,53],[290,-250,53],[0,365,53],[-360,85,53],[365,55,53],[10,-340,53],[40,195,53],[-520,-90,64],[520,-180,62],[-430,410,60],[430,390,60],[0,0,220]];
+const flatZones=[[-325,-220,64],[290,-250,64],[0,365,64],[-360,85,64],[365,55,64],[10,-340,64],[40,195,64],[-520,-90,72],[520,-180,72],[-430,410,72],[430,390,72],[0,0,245],[-500,-300,78],[500,-300,78],[-500,360,78],[500,360,78],[-350,-90,68],[350,-80,68],[-340,250,68],[350,245,68],[-120,-430,68],[135,430,68]];
 function terrainRaw(x,z){
   const d=Math.hypot(x,z);
   let h=8+11*Math.sin(x*.011)*Math.cos(z*.012)+6*Math.sin((x+z)*.029);
@@ -30,9 +30,6 @@ function terrainRaw(x,z){
     const a=i*Math.PI*2/7+.35,px=460*Math.cos(a),pz=460*Math.sin(a);
     h+=43*Math.exp(-((x-px)**2+(z-pz)**2)/22000);
   }
-  // Riverbed gouged into the terrain: a shallow bed and wider natural banks.
-  const riverX=-90+22*Math.sin(z*.013),riverDist=Math.abs(x-riverX);
-  h-=7*(1-THREE.MathUtils.smoothstep(riverDist,9,34));
   for(const b of bases){
     const q=Math.hypot(x-b.x,z-b.z);
     if(q<105){
@@ -77,74 +74,20 @@ scene.add(terrainMesh);
 function box(x,y,z,w,h,d,color=paper){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color));m.position.set(x,y,z);scene.add(m);return m;}
 function cylinder(x,y,z,r,h,color,segments=12){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,segments),mat(color));m.position.set(x,y,z);scene.add(m);return m;}
 function line(points,color=ink,width=2){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const material=color?.isMaterial?color:mat(color);const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,Math.max(8,points.length*5),width,5,false),material);scene.add(mesh);return mesh;}
-function road(a,b,w=11){
-  const v=[],idx=[],S=120,dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),nx=-dz/L,nz=dx/L;
-  for(let i=0;i<=S;i++){
-    const t=i/S,x=a.x+dx*t,z=a.z+dz*t;
-    for(const side of [-1,1]){const xx=x+nx*side*w*.5,zz=z+nz*side*w*.5;v.push(xx,height(xx,zz)+.32,zz);}
-    if(i<S){const j=i*2;idx.push(j,j+2,j+1,j+1,j+2,j+3);}
-  }
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(idx);g.computeVertexNormals();
-  const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x8f6843,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1}));
-  scene.add(m);return m;
-}
-
-for(let i=0;i<3;i++){
-  const b=bases[i];
-  const dir=new THREE.Vector2(-b.x,-b.z).normalize();
-  // Estradas terminam no anel externo do aeroporto; não atravessam a pista central.
-  const p={x:b.x+dir.x*175,z:b.z+dir.y*175};
-  // As vias terminam antes do perímetro pavimentado: nenhuma estrada marrom cruza o aeroporto.
-  road(b,p,12);
-}
-
-const bridges=[];
-function bridge(z,centerX=-90,length=112,width=18){
-  const x1=centerX-length/2,x2=centerX+length/2,ramp=36,clearance=22;
-  const leftY=height(x1-ramp,z)+.45,rightY=height(x2+ramp,z)+.45;
-  const deckY=Math.max(height(x1,z),height(x2,z),height(centerX,z)+clearance,leftY+7,rightY+7)+1.2;
-  const segments=40,vertices=[],idx=[];
-  function elevation(x){if(x<x1){const t=THREE.MathUtils.smoothstep(x,x1-ramp,x1);return THREE.MathUtils.lerp(leftY,deckY,t);}if(x>x2){const t=THREE.MathUtils.smoothstep(x,x2,x2+ramp);return THREE.MathUtils.lerp(deckY,rightY,t);}return deckY;}
-  for(let i=0;i<=segments;i++){const x=x1-ramp+(length+2*ramp)*i/segments,y=elevation(x);vertices.push(x,y,z-width/2,x,y,z+width/2);if(i<segments){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(idx);g.computeVertexNormals();
-  const deck=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xae8861,side:THREE.DoubleSide}));scene.add(deck);
-  for(const dz of [-width/2,width/2]) box(centerX,deckY+.75,z+dz,length,1.4,.5,0x806d53);
-  for(const px of [x1+12,centerX,x2-12]){const gy=height(px,z); box(px,(deckY+gy)/2-1.2,z,2.4,deckY-gy+2.4,3.6,0x7e6952); box(px,gy+1.2,z,7.2,2.4,7.2,0x8f7a62);} 
-  for(const offset of [-length*0.24,length*0.24]){const px=centerX+offset; const gy=height(px,z); const braceH=(deckY-gy)/2; box(px,gy+braceH,z-width*.24,1.2,deckY-gy+1.2,1.2,0x6d5947); box(px,gy+braceH,z+width*.24,1.2,deckY-gy+1.2,1.2,0x6d5947);} 
-  bridges.push({x1:x1-ramp,x2:x2+ramp,core1:x1,core2:x2,z,width,deckY,elevation,ramp});
-}
-for(const z of [-320,-130,120,320]) bridge(z);
-
+// Pontes, pilares, estradas de terra e rio foram removidos temporariamente.
 const groundRay=new THREE.Raycaster();
 function groundSurface(x,z){groundRay.set(new THREE.Vector3(x,600,z),new THREE.Vector3(0,-1,0));const hit=groundRay.intersectObject(terrainMesh,false)[0];return hit?hit.point.y:height(x,z);}
-// Retorna a superfície física apropriada ao nível atual da entidade.
-// A ponte só é escolhida quando a entidade já está nela, está na rampa ou está chegando ao tabuleiro por cima.
-function driveHeight(x,z,entity=null,currentY=null){
-  const ground=groundSurface(x,z);
-  const type=entity?.type||'foot';
-  const refY=(currentY ?? entity?.group?.position?.y ?? ground) - (type==='foot'?2:0);
-  for(const b of bridges){
-    if(!(x>=b.x1&&x<=b.x2&&Math.abs(z-b.z)<b.width*.54)) continue;
-    const deck=b.elevation(x);
-    const onRamp=x<b.core1||x>b.core2;
-    const closeToDeck=type==='heli' ? (refY>=deck+2.0 && refY-deck<10) : Math.abs(refY-deck)<4.5;
-    const enteredRamp=onRamp && Math.abs(ground-deck)<3.2;
-    const alreadyOn=!!entity?.onBridge;
-    const heliLanding=type==='heli' && refY>=deck+2.0;
-    if(alreadyOn||closeToDeck||enteredRamp||heliLanding){
-      if(entity) entity.onBridge=true;
-      return Math.max(ground,deck);
-    }
-    if(entity) entity.onBridge=false;
-    return ground;
-  }
-  if(entity) entity.onBridge=false;
-  return ground;
-}
+function driveHeight(x,z,entity=null,currentY=null){if(entity)entity.onBridge=false;return groundSurface(x,z);}
 
 const tower=(x,z,c=ink)=>{const y=height(x,z);box(x,y+13,z,5,26,5,c);box(x,y+28,z,12,5,12,0xfaf5e8);box(x,y+32,z,1,8,1,c);};
 const obstacles=[];
-function building(x,z,c,w=18,d=15){const y=Math.max(height(x-w/2,z-d/2),height(x+w/2,z-d/2),height(x-w/2,z+d/2),height(x+w/2,z+d/2),height(x,z));box(x,y-1.2,z,w+.3,2.4,d+.3,0xb4aa94);box(x,y+5,z,w,10,d,0xf7f2e6);box(x,y+10.5,z,w+2,2,d+2,c);box(x,y+2,z+d/2+.15,5,4,.3,c);obstacles.push({x,z,w:w+2,d:d+2});}
+function building(x,z,c,w=18,d=15){const y=height(x,z);box(x,y-1.2,z,w+.3,2.4,d+.3,0xb4aa94);box(x,y+5,z,w,10,d,0xf7f2e6);box(x,y+10.5,z,w+2,2,d+2,c);
+  // Porta e janelas desenhadas na fachada voltada para +Z, sempre acima do piso plano.
+  box(x,y+2.15,z+d/2+.19,2.3,4.3,.22,0x795a43);box(x,y+2.1,z+d/2+.32,1.45,3.25,.08,0xb7c6c7);
+  const winW=Math.max(1.5,Math.min(2.7,w*.16));for(const wx of [-w*.29,w*.29]){box(x+wx,y+6.6,z+d/2+.2,winW,2.25,.22,0x557d91);box(x+wx,y+6.6,z+d/2+.34,.12,2.35,.08,0xe9e3d7);box(x+wx,y+6.6,z+d/2+.35,winW, .12,.08,0xe9e3d7);}
+  obstacles.push({x,z,w:w+2,d:d+2});}
+function cityBuilding(x,z,w=24,d=22,floors=4,color=0x9aabb3){const y=height(x,z),h=floors*5.2;box(x,y-1,z,w+1,2,d+1,0x9b9b91);box(x,y+h/2,z,w,h,d,color);box(x,y+h+1,z,w+2,2,d+2,0x596d7a);for(let floor=0;floor<floors;floor++){for(const side of [-1,1])for(let col=0;col<3;col++){const wx=x+side*(w*.29),wz=z-d/2-.12+col*(d-1)/2;box(wx,y+3+floor*5.2,wz,3.1,2.7,.16,0x426a80);box(wx,y+3+floor*5.2,wz-.1,.12,2.8,.06,0xe4e1d7);}}box(x,y+2.2,z+d/2+.16,3,4.4,.18,0x614f43);obstacles.push({x,z,w:w+2,d:d+2});}
+
 
 const helis=[],cars=[];
 function helicopter(x,z,color,yaw=0){
@@ -186,7 +129,7 @@ function jeep(x,z,color,yaw=0){
   const rack=new THREE.Mesh(new THREE.BoxGeometry(2.1,.15,3.2),mat(0x5c6c6b));rack.position.set(.1,4.05,0);model.add(rack);
   for(const side of [-1,1]){const rail=new THREE.Mesh(new THREE.BoxGeometry(2.1,.12,.12),mat(0x5c6c6b));rail.position.set(2.05,3.02,side*1.5);model.add(rail);}
   group.position.set(x,driveHeight(x,z),z);group.rotation.y=yaw-Math.PI/2;model.rotation.order='ZYX';scene.add(group);
-  const v={type:'jeep',group,model,wheelGroups,frontWheelPivots,speed:0,targetSpeed:0,yaw,onBridge:false}; cars.push(v); return v;
+  const v={type:'jeep',group,model,wheelGroups,frontWheelPivots,speed:0,targetSpeed:0,yaw}; cars.push(v); return v;
 }
 function terrainAttitude(x,z,yaw){const forward=new THREE.Vector2(-Math.sin(yaw),-Math.cos(yaw)),side=new THREE.Vector2(Math.cos(yaw),-Math.sin(yaw)),step=3.5;const front=driveHeight(x+forward.x*step,z+forward.y*step),rear=driveHeight(x-forward.x*step,z-forward.y*step),left=driveHeight(x-side.x*step,z-side.y*step),right=driveHeight(x+side.x*step,z+side.y*step);return {pitch:Math.atan2(front-rear,step*2),roll:Math.atan2(right-left,step*2)};}
 
@@ -208,6 +151,8 @@ for(let i=0;i<8;i++){const a=i*Math.PI/4,r=112,x=r*Math.cos(a),z=r*Math.sin(a); 
 const placeOutpost=(x,z,accent)=>{for(let k=0;k<4;k++){const dx=(k%2)*25-12,dz=Math.floor(k/2)*24-12;if(bases.every(b=>Math.hypot(x+dx-b.x,z+dz-b.z)>112)) building(x+dx,z+dz,accent,12+(k%2)*4,11);} tower(x+34,z-28,accent); for(let k=0;k<5;k++){const xx=x-32+(k%3)*14,zz=z+38+Math.floor(k/3)*12; box(xx,height(xx,zz)+2,zz,7,4,7,0xa99b82);}};
 
 for(const [x,z,c] of [[-350,-90,0x6688a4],[350,-80,0xb39b74],[-340,250,0x759588],[350,245,0x8e9c84],[-120,-430,0x9e917f],[135,430,0xa29a84]]) placeOutpost(x,z,c);
+// Pequeno conjunto urbano com prédios mais altos para diferenciar os bairros das áreas só residenciais.
+cityBuilding(-374,-105,24,22,4,0x9aabb3);cityBuilding(372,-92,22,25,5,0xb2a18e);cityBuilding(-362,268,26,22,3,0x9aa9a0);cityBuilding(370,262,22,24,4,0xa5a7ae);cityBuilding(-135,-447,23,21,4,0xb5a28e);cityBuilding(151,447,25,22,3,0x9aabb3);
 
 function flatLevel(x,z){return height(x,z);} 
 function crate(x,z,w=6,h=6,d=6,c=0x9f815e){box(x,flatLevel(x,z)+h/2,z,w,h,d,c);} 
@@ -362,22 +307,13 @@ scrapYard(-500,360);
 powerStation(500,360);
 airstrip(0,0);
 for(let i=0;i<70;i++){const x=((i*181+89)%1010)-505,z=((i*233+91)%1020)-510;if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<115)||Math.hypot(x,z)<85) continue; const y=height(x,z),r=3+i%5; const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),mat(i%3?0xd2c8b3:0xbeb6a6)); rock.position.set(x,y+r*.32,z); rock.scale.y=1.2+(i%4)*.32; scene.add(rock);} 
-// Water is a flat ribbon just above the excavated riverbed, never a raised tube.
-const waterVertices=[],waterIndices=[];
-for(let i=0;i<=240;i++){
-  const z=-596+i*1192/240,x=-90+22*Math.sin(z*.013);
-  // Sample banks at the center; render surface nearly flush with the channel floor.
-  for(const dx of [-8,8])waterVertices.push(x+dx,height(x+dx,z)+.20,z);
-  if(i<240){const a=i*2;waterIndices.push(a,a+2,a+1,a+1,a+2,a+3);}
-}
-const waterGeo=new THREE.BufferGeometry();waterGeo.setAttribute('position',new THREE.Float32BufferAttribute(waterVertices,3));waterGeo.setIndex(waterIndices);waterGeo.computeVertexNormals();
-const waterMesh=new THREE.Mesh(waterGeo,new THREE.MeshLambertMaterial({color:0x67b7cb,transparent:true,opacity:.87,side:THREE.DoubleSide,depthWrite:false}));scene.add(waterMesh);
+// Água removida temporariamente para permitir realocação planejada do rio.
 // Árvores maiores, com copas arredondadas e irregulares em vez de cones pontudos.
 const canopyMats=[mat(0x557f45),mat(0x668e4c),mat(0x759955),mat(0x4f7541)];
 for(let i=0;i<340;i++){
   const x=((i*97+23)%1140)-570,z=((i*317+7)%1140)-570;
   const nearBase=bases.some(b=>Math.hypot(x-b.x,z-b.z)<96);
-  if(nearBase||Math.hypot(x,z)<78||Math.abs(x+90-22*Math.sin(z*.013))<17) continue;
+  if(nearBase||Math.hypot(x,z)<78) continue;
   const h=height(x,z); if(h>130) continue;
   const tall=10+(i%5)*2.5, crownW=6.3+(i%4)*1.15;
   cylinder(x,h+tall*.26,z,1.25+(i%3)*.18,tall*.55,0x8a745d,7);
@@ -390,7 +326,7 @@ for(let i=0;i<340;i++){
 const grassMats=[mat(0x668b49),mat(0x789b54),mat(0x527b40),mat(0x8b9d59)];
 for(let i=0;i<180;i++){
   const x=((i*131+57)%1120)-560,z=((i*281+39)%1120)-560;
-  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72||Math.abs(x+90-22*Math.sin(z*.013))<16) continue;
+  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72) continue;
   const y=groundSurface(x,z); if(y>110) continue;
   const positions=[];
   for(let j=0;j<4;j++){
@@ -403,7 +339,7 @@ for(let i=0;i<180;i++){
   const tuft=new THREE.Mesh(g,grassMats[i%grassMats.length]);tuft.material.side=THREE.DoubleSide;tuft.position.set(x,y+.12,z);tuft.rotation.y=(i*.61)%Math.PI;scene.add(tuft);
 }
 
-const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null,onBridge:false};
+const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null};
 let orbitYaw=0,orbitPitch=.2;
 scene.add(camera);
 const weapon=new THREE.Group(); camera.add(weapon);
@@ -475,8 +411,8 @@ function updateObjectives(dt,elapsed){
   objectiveEl.textContent=currentText; updateScoreHud(state); if(elapsed>=match.duration) endMatch();
 }
 
-function spawn(){player.vehicle=null;player.onBridge=false;jumpHeight=0;jumpVelocity=0;updateModeControls();const b=bases[player.team],d=new THREE.Vector2(-b.x,-b.z).normalize();player.pos.set(b.x+d.x*18,height(b.x+d.x*18,b.z+d.y*18)+2,b.z+d.y*18);player.yaw=Math.atan2(-d.x,-d.y);player.pitch=0;showNotice(`TIME ${TEAM_NAMES[player.team]} • BASE PROTEGIDA`);} 
-function enter(){if(player.vehicle){const p=player.vehicle.group.position;if(player.vehicle.type==='heli'&&p.y>height(p.x,p.z)+7){showNotice('DESÇA E POUSE ANTES DE SAIR');return;}let ex=p.x+8,ez=p.z+8;if(blocked(ex,ez)){ex=p.x-8;ez=p.z-8;}player.pos.set(ex,driveHeight(ex,ez,null,height(ex,ez)+2)+2,ez);player.vehicle=null;player.onBridge=false;updateModeControls();return;} let nearest=null,dist=13; for(const v of [...helis,...cars]){const d=player.pos.distanceTo(v.group.position); if(d<dist){dist=d;nearest=v;}} if(nearest){player.vehicle=nearest; player.yaw=nearest.yaw; orbitYaw=0; orbitPitch=.2; updateModeControls(); showNotice(nearest.type==='heli'?'HELICÓPTERO • CONTROLE EM TERCEIRA PESSOA':'PICKUP • CONTROLE EM TERCEIRA PESSOA');} else showNotice('APROXIME-SE DE UM VEÍCULO');}
+function spawn(){player.vehicle=null;jumpHeight=0;jumpVelocity=0;updateModeControls();const b=bases[player.team],d=new THREE.Vector2(-b.x,-b.z).normalize();player.pos.set(b.x+d.x*18,height(b.x+d.x*18,b.z+d.y*18)+2,b.z+d.y*18);player.yaw=Math.atan2(-d.x,-d.y);player.pitch=0;showNotice(`TIME ${TEAM_NAMES[player.team]} • BASE PROTEGIDA`);} 
+function enter(){if(player.vehicle){const p=player.vehicle.group.position;if(player.vehicle.type==='heli'&&p.y>height(p.x,p.z)+7){showNotice('DESÇA E POUSE ANTES DE SAIR');return;}let ex=p.x+8,ez=p.z+8;if(blocked(ex,ez)){ex=p.x-8;ez=p.z-8;}player.pos.set(ex,driveHeight(ex,ez,null,height(ex,ez)+2)+2,ez);player.vehicle=null;updateModeControls();return;} let nearest=null,dist=13; for(const v of [...helis,...cars]){const d=player.pos.distanceTo(v.group.position); if(d<dist){dist=d;nearest=v;}} if(nearest){player.vehicle=nearest; player.yaw=nearest.yaw; orbitYaw=0; orbitPitch=.2; updateModeControls(); showNotice(nearest.type==='heli'?'HELICÓPTERO • CONTROLE EM TERCEIRA PESSOA':'PICKUP • CONTROLE EM TERCEIRA PESSOA');} else showNotice('APROXIME-SE DE UM VEÍCULO');}
 const board=document.getElementById('board'); board.addEventListener('click',enter); const action=document.getElementById('action'),verticalControls=document.getElementById('verticalControls'),yawControls=document.getElementById('yawControls');
 function updateModeControls(){const v=player.vehicle; weapon.visible=!v; fireButton.style.display=v?'none':'block'; reloadButton.style.display=v?'none':'block'; weaponHud.style.display=v?'none':'block'; verticalControls.style.display=v?.type==='heli'?'flex':'none'; yawControls.style.display=v?.type==='heli'?'flex':'none'; action.textContent=v?'SAIR':'PULAR'; document.getElementById('modeHint').textContent=v?.type==='heli'?'Analógico: voar • ↶ ↷ girar no próprio eixo • ▲ subir / ▼ descer':v?'Analógico: dirigir • arraste a tela para olhar • SAIR para desembarcar':'Analógico: mover • arraste a tela para olhar';}
 action.addEventListener('click',()=>{if(player.vehicle){enter();return;} if(jumpHeight<=.02) jumpVelocity=10.8;});
@@ -634,7 +570,7 @@ function animate(){
     if(!blocked(nextX,player.pos.z)) player.pos.x=nextX;
     if(!blocked(player.pos.x,nextZ)) player.pos.z=nextZ;
     player.pos.x=THREE.MathUtils.clamp(player.pos.x,-580,580); player.pos.z=THREE.MathUtils.clamp(player.pos.z,-580,580);
-    const footEntity={type:'foot',onBridge:player.onBridge};
+    const footEntity={type:'foot'};
     const surface=driveHeight(player.pos.x,player.pos.z,footEntity,player.pos.y);
     let feetY=player.pos.y-2;
     if(feetY>surface+.04){
@@ -647,7 +583,7 @@ function animate(){
     }
     jumpHeight=Math.max(0,feetY-surface);
     player.pos.y=feetY+2;
-    player.onBridge=!!footEntity.onBridge;
+
     camera.position.copy(player.pos); camera.rotation.order='YXZ'; camera.rotation.y=player.yaw; camera.rotation.x=player.pitch;
   }
 
