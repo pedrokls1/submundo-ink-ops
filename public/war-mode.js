@@ -21,7 +21,7 @@ const ink=0x24466e, paper=0xf5f0e3;
 const mat=(c)=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
 const treeMat=mat(0x5b8c48),trunkMat=mat(0x8a745d),inkMat=mat(ink),whiteMat=mat(paper),waterMat=new THREE.MeshLambertMaterial({color:0x79bfd4,flatShading:true});
 
-const flatZones=[[-325,-220,64],[290,-250,64],[0,365,64],[-360,85,64],[365,55,64],[10,-340,64],[40,195,64],[-520,-90,72],[520,-180,72],[-430,410,72],[430,390,72],[0,0,320],[-500,-300,78],[500,-300,78],[-500,360,78],[500,360,78],[-350,-90,68],[350,-80,68],[-340,250,68],[350,245,68],[-120,-430,68],[135,430,68]];
+const flatZones=[[-325,-220,64],[290,-250,64],[0,365,64],[-360,85,64],[365,55,64],[10,-340,64],[40,195,64],[-520,-90,72],[520,-180,72],[-430,410,72],[430,390,72],[0,0,365],[-500,-300,78],[500,-300,78],[-500,360,78],[500,360,78],[-350,-90,68],[350,-80,68],[-340,250,68],[350,245,68],[-120,-430,68],[135,430,68]];
 function terrainRaw(x,z){
   const d=Math.hypot(x,z);
   let h=8+11*Math.sin(x*.011)*Math.cos(z*.012)+6*Math.sin((x+z)*.029);
@@ -86,7 +86,7 @@ function building(x,z,c,w=18,d=15){const y=height(x,z);box(x,y-1.2,z,w+.3,2.4,d+
   box(x,y+2.15,z+d/2+.19,2.3,4.3,.22,0x795a43);box(x,y+2.1,z+d/2+.32,1.45,3.25,.08,0xb7c6c7);
   const winW=Math.max(1.5,Math.min(2.7,w*.16));for(const wx of [-w*.29,w*.29]){box(x+wx,y+6.6,z+d/2+.2,winW,2.25,.22,0x557d91);box(x+wx,y+6.6,z+d/2+.34,.12,2.35,.08,0xe9e3d7);box(x+wx,y+6.6,z+d/2+.35,winW, .12,.08,0xe9e3d7);}
   obstacles.push({x,z,w:w+2,d:d+2});}
-function cityBuilding(x,z,w=24,d=22,floors=4,color=0x9aabb3){const y=height(x,z),h=floors*5.2;box(x,y-1,z,w+1,2,d+1,0x9b9b91);box(x,y+h/2,z,w,h,d,color);box(x,y+h+1,z,w+2,2,d+2,0x596d7a);for(let floor=0;floor<floors;floor++){for(const side of [-1,1])for(let col=0;col<3;col++){const wx=x+side*(w*.29),wz=z-d/2-.12+col*(d-1)/2;box(wx,y+3+floor*5.2,wz,3.1,2.7,.16,0x426a80);box(wx,y+3+floor*5.2,wz-.1,.12,2.8,.06,0xe4e1d7);}}box(x,y+2.2,z+d/2+.16,3,4.4,.18,0x614f43);obstacles.push({x,z,w:w+2,d:d+2});}
+function cityBuilding(x,z,w=24,d=22,floors=4,color=0x9aabb3){if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<125))return;const y=height(x,z),h=floors*5.2;box(x,y-1,z,w+1,2,d+1,0x9b9b91);box(x,y+h/2,z,w,h,d,color);box(x,y+h+1,z,w+2,2,d+2,0x596d7a);for(let floor=0;floor<floors;floor++){for(const side of [-1,1])for(let col=0;col<3;col++){const wx=x+side*(w*.29),wz=z-d/2-.12+col*(d-1)/2;box(wx,y+3+floor*5.2,wz,3.1,2.7,.16,0x426a80);box(wx,y+3+floor*5.2,wz-.1,.12,2.8,.06,0xe4e1d7);}}box(x,y+2.2,z+d/2+.16,3,4.4,.18,0x614f43);obstacles.push({x,z,w:w+2,d:d+2});}
 
 
 const helis=[],cars=[];
@@ -233,32 +233,32 @@ function airportServiceTruck(x,z,y,rotation=0,color=0xd7dfdf){
 function airstrip(x,z){
   const y=flatLevel(x,z);
   // Área pavimentada ampla e sem estradas de terra atravessando o pátio.
-  box(x,y+.32,z,330,.12,440,0xb9b5aa);
+  box(x,y+.62,z,330,.24,440,0xb9b5aa);
   // Pista principal ampliada, com cabeceiras e marcações de pouso mais fortes.
-  box(x,y+.43,z,132,.18,390,0x62686a);
-  box(x,y+.535,z-183,124,.035,18,0xeee9dc);
-  box(x,y+.535,z+183,124,.035,18,0xeee9dc);
+  box(x,y+.80,z,132,.18,390,0x62686a);
+  box(x,y+.905,z-183,124,.035,18,0xeee9dc);
+  box(x,y+.905,z+183,124,.035,18,0xeee9dc);
   for(const side of [-1,1]){
-    box(x+side*62,y+.545,z,2.2,.08,350,0xf5f0e5);
+    box(x+side*62,y+.915,z,2.2,.08,350,0xf5f0e5);
     for(let i=0;i<10;i++) box(x+side*52,y+.55,z-160+i*35,8,.08,17,0xf5f0e5);
     // Grandes marcas de cabeceira estilo aeroporto.
-    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.555,z-169,2.8,.08,19,0xf5f0e5);
-    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.555,z+169,2.8,.08,19,0xf5f0e5);
+    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.925,z-169,2.8,.08,19,0xf5f0e5);
+    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.925,z+169,2.8,.08,19,0xf5f0e5);
   }
-  box(x,y+.555,z,2.1,.08,316,0xf6f0e4);
-  for(let i=0;i<16;i++) box(x,y+.56,z-145+i*19,2.2,.08,9,0xf6f0e4);
+  box(x,y+.925,z,2.1,.08,316,0xf6f0e4);
+  for(let i=0;i<16;i++) box(x,y+.93,z-145+i*19,2.2,.08,9,0xf6f0e4);
   // Taxiway lateral curvada por segmentos e pátio para aeronaves/serviços.
-  box(x-112,y+.40,z+18,92,.16,252,0x777b7a);
-  box(x-112,y+.535,z+18,1.1,.08,230,0xf0e9d9);
-  box(x-112,y+.535,z+18,70,.08,1.1,0xf0e9d9);
-  box(x-112,y+.535,z-90,70,.08,1.1,0xf0e9d9);
+  box(x-112,y+.80,z+18,92,.16,252,0x777b7a);
+  box(x-112,y+.905,z+18,1.1,.08,230,0xf0e9d9);
+  box(x-112,y+.905,z+18,70,.08,1.1,0xf0e9d9);
+  box(x-112,y+.905,z-90,70,.08,1.1,0xf0e9d9);
   // Pátio de estacionamento, linhas de posições e áreas de segurança.
-  box(x-118,y+.40,z+56,112,.16,145,0x858785);
+  box(x-118,y+.80,z+56,112,.16,145,0x858785);
   for(let i=0;i<6;i++){
     const px=x-157+i*15;
-    box(px,y+.545,z+18,1,.08,66,0xf1ecdf);
-    box(px,y+.545,z+51,14,.08,1,0xf1ecdf);
-    box(px,y+.545,z+84,14,.08,1,0xf1ecdf);
+    box(px,y+.915,z+18,1,.08,66,0xf1ecdf);
+    box(px,y+.915,z+51,14,.08,1,0xf1ecdf);
+    box(px,y+.915,z+84,14,.08,1,0xf1ecdf);
   }
   // Hangar de manutenção e terminal de serviço, com portas grandes e cobertura azul.
   box(x-177,y+13,z-66,48,26,56,0xd9d4c7);
@@ -282,10 +282,18 @@ function airstrip(x,z){
     const lowerStripe=new THREE.Mesh(new THREE.BoxGeometry(28,.22,.13),mat(0xd35d45));lowerStripe.position.set(3,-.55,side*3.96);plane.add(lowerStripe);
     for(let i=0;i<8;i++){const win=new THREE.Mesh(new THREE.BoxGeometry(1.15,.55,.16),mat(0x426b83));win.position.set(-17+i*4.2,2.25,side*4.03);plane.add(win);}
   }
-  const wing=new THREE.Mesh(new THREE.BoxGeometry(25,.9,55),mat(0x6c89a8));wing.position.set(-2,.05,0);plane.add(wing);
-  const wingTop=new THREE.Mesh(new THREE.BoxGeometry(24,.2,53),mat(0x9eafbb));wingTop.position.set(-2,.58,0);plane.add(wingTop);
-  const tailWing=new THREE.Mesh(new THREE.BoxGeometry(10,.6,22),mat(0x557c9e));tailWing.position.set(19,4.1,0);plane.add(tailWing);
-  const fin=new THREE.Mesh(new THREE.BoxGeometry(3,11,7),mat(0x557c9e));fin.position.set(20,7.1,0);plane.add(fin);
+  // Asas com planta trapezoidal e pontas afiladas, evitando o aspecto de bloco quadrado.
+  function taperedWing(span,rootChord,tipChord,sweep,thickness,color){
+    const shape=new THREE.Shape();shape.moveTo(-rootChord*.52,-span*.5);shape.lineTo(rootChord*.48,-span*.5);shape.lineTo(sweep+tipChord*.5,span*.5);shape.lineTo(sweep-tipChord*.5,span*.5);shape.closePath();
+    const geo=new THREE.ExtrudeGeometry(shape,{depth:thickness,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.12,bevelThickness:.08});
+    geo.rotateX(-Math.PI/2);geo.translate(0,thickness*.5,0);
+    const mesh=new THREE.Mesh(geo,mat(color));plane.add(mesh);return mesh;
+  }
+  taperedWing(55,25,9,5,.72,0x6c89a8).position.set(-2,.05,0);
+  taperedWing(53,24,8,5,.14,0x9eafbb).position.set(-2,.57,0);
+  taperedWing(22,10,4,2,.5,0x557c9e).position.set(19,4.1,0);
+  const finShape=new THREE.Shape();finShape.moveTo(0,0);finShape.lineTo(8,0);finShape.lineTo(5,10);finShape.lineTo(3,10.5);finShape.closePath();
+  const fin=new THREE.Mesh(new THREE.ExtrudeGeometry(finShape,{depth:1.5,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.15,bevelThickness:.12}),mat(0x557c9e));fin.position.set(17,2.5,-.75);plane.add(fin);
   for(const ex of [-10,7]) for(const ez of [-15,15]){
     const nacelle=new THREE.Mesh(new THREE.CylinderGeometry(1.9,2.1,7.5,16),mat(0x7b858d));nacelle.rotation.z=Math.PI/2;nacelle.position.set(ex,-1.15,ez);plane.add(nacelle);
     const intake=new THREE.Mesh(new THREE.CircleGeometry(1.4,16),mat(0x303c46));intake.position.set(ex-3.8,-1.15,ez);intake.rotation.y=-Math.PI/2;plane.add(intake);
@@ -296,7 +304,7 @@ function airstrip(x,z){
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,.9,14),inkMat);wheel.rotation.z=Math.PI/2;wheel.position.set(gx,-5.55,gz);plane.add(wheel);
   }
   plane.position.set(x+6,y+7,z+48);plane.rotation.y=Math.PI/2;scene.add(plane);
-  obstacles.push({x:x+6,z:z+48,w:34,d:18});
+  // Aeronave decorativa: não cria uma caixa de colisão invisível que bloqueie o centro.
   // Rebocadores, caminhão de serviço, carrinhos e caixas formam coberturas úteis na guerra.
   airportTug(x-157,z+22,y,0,0xe0b64f);
   airportTug(x-126,z+53,y,Math.PI/2,0xd75b43);
@@ -308,20 +316,23 @@ function airstrip(x,z){
   for(let i=0;i<5;i++){const bx=x-203+(i%3)*13,bz=z-7+Math.floor(i/3)*13;box(bx,y+2.1,bz,9,4.2,5,i%2?0x8b795f:0x747c7d);obstacles.push({x:bx,z:bz,w:10,d:6});}
 }
 
+// Área reservada do aeroporto: manter pista e pátio livres de vegetação e pedras.
+function insideAirportClearance(x,z,pad=0){return Math.abs(x)<190+pad && Math.abs(z)<238+pad;}
+
 // 5 setores temáticos para referência visual no mapa.
 oilField(-500,-300);
 cargoYard(500,-300);
 scrapYard(-500,360);
 powerStation(500,360);
 airstrip(0,0);
-for(let i=0;i<70;i++){const x=((i*181+89)%1010)-505,z=((i*233+91)%1020)-510;if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<115)||Math.hypot(x,z)<85) continue; const y=height(x,z),r=3+i%5; const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),mat(i%3?0xd2c8b3:0xbeb6a6)); rock.position.set(x,y+r*.32,z); rock.scale.y=1.2+(i%4)*.32; scene.add(rock);} 
+for(let i=0;i<70;i++){const x=((i*181+89)%1010)-505,z=((i*233+91)%1020)-510;if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<115)||Math.hypot(x,z)<85||insideAirportClearance(x,z,8)) continue; const y=height(x,z),r=3+i%5; const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(r,0),mat(i%3?0xd2c8b3:0xbeb6a6)); rock.position.set(x,y+r*.32,z); rock.scale.y=1.2+(i%4)*.32; scene.add(rock);} 
 // Água removida temporariamente para permitir realocação planejada do rio.
 // Árvores maiores, com copas arredondadas e irregulares em vez de cones pontudos.
 const canopyMats=[mat(0x557f45),mat(0x668e4c),mat(0x759955),mat(0x4f7541)];
 for(let i=0;i<340;i++){
   const x=((i*97+23)%1140)-570,z=((i*317+7)%1140)-570;
   const nearBase=bases.some(b=>Math.hypot(x-b.x,z-b.z)<96);
-  if(nearBase||Math.hypot(x,z)<78) continue;
+  if(nearBase||Math.hypot(x,z)<78||insideAirportClearance(x,z,12)) continue;
   const h=height(x,z); if(h>130) continue;
   const tall=10+(i%5)*2.5, crownW=6.3+(i%4)*1.15;
   cylinder(x,h+tall*.26,z,1.25+(i%3)*.18,tall*.55,0x8a745d,7);
@@ -334,7 +345,7 @@ for(let i=0;i<340;i++){
 const grassMats=[mat(0x668b49),mat(0x789b54),mat(0x527b40),mat(0x8b9d59)];
 for(let i=0;i<180;i++){
   const x=((i*131+57)%1120)-560,z=((i*281+39)%1120)-560;
-  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72) continue;
+  if(bases.some(b=>Math.hypot(x-b.x,z-b.z)<98)||Math.hypot(x,z)<72||insideAirportClearance(x,z,12)) continue;
   const y=groundSurface(x,z); if(y>110) continue;
   const positions=[];
   for(let j=0;j<4;j++){
