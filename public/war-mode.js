@@ -21,7 +21,7 @@ const ink=0x24466e, paper=0xf5f0e3;
 const mat=(c)=>new THREE.MeshLambertMaterial({color:c,flatShading:true});
 const treeMat=mat(0x5b8c48),trunkMat=mat(0x8a745d),inkMat=mat(ink),whiteMat=mat(paper),waterMat=new THREE.MeshLambertMaterial({color:0x79bfd4,flatShading:true});
 
-const flatZones=[[-325,-220,64],[290,-250,64],[0,365,64],[-360,85,64],[365,55,64],[10,-340,64],[40,195,64],[-520,-90,72],[520,-180,72],[-430,410,72],[430,390,72],[0,0,245],[-500,-300,78],[500,-300,78],[-500,360,78],[500,360,78],[-350,-90,68],[350,-80,68],[-340,250,68],[350,245,68],[-120,-430,68],[135,430,68]];
+const flatZones=[[-325,-220,64],[290,-250,64],[0,365,64],[-360,85,64],[365,55,64],[10,-340,64],[40,195,64],[-520,-90,72],[520,-180,72],[-430,410,72],[430,390,72],[0,0,320],[-500,-300,78],[500,-300,78],[-500,360,78],[500,360,78],[-350,-90,68],[350,-80,68],[-340,250,68],[350,245,68],[-120,-430,68],[135,430,68]];
 function terrainRaw(x,z){
   const d=Math.hypot(x,z);
   let h=8+11*Math.sin(x*.011)*Math.cos(z*.012)+6*Math.sin((x+z)*.029);
@@ -153,6 +153,14 @@ const placeOutpost=(x,z,accent)=>{for(let k=0;k<4;k++){const dx=(k%2)*25-12,dz=M
 for(const [x,z,c] of [[-350,-90,0x6688a4],[350,-80,0xb39b74],[-340,250,0x759588],[350,245,0x8e9c84],[-120,-430,0x9e917f],[135,430,0xa29a84]]) placeOutpost(x,z,c);
 // Pequeno conjunto urbano com prédios mais altos para diferenciar os bairros das áreas só residenciais.
 cityBuilding(-374,-105,24,22,4,0x9aabb3);cityBuilding(372,-92,22,25,5,0xb2a18e);cityBuilding(-362,268,26,22,3,0x9aa9a0);cityBuilding(370,262,22,24,4,0xa5a7ae);cityBuilding(-135,-447,23,21,4,0xb5a28e);cityBuilding(151,447,25,22,3,0x9aabb3);
+// Novos edifícios urbanos distribuídos pelos setores, com fachadas e janelas visíveis.
+cityBuilding(-285,-340,21,20,3,0xa4b0b5);cityBuilding(-225,-325,19,22,4,0xb9a88e);
+cityBuilding(275,-350,24,20,4,0x9eabb5);cityBuilding(335,-325,20,23,3,0xb4a18e);
+cityBuilding(-285,15,22,20,4,0x9caeaa);cityBuilding(-250,55,18,20,3,0xb9b1a0);
+cityBuilding(275,5,23,21,5,0x9aa8b5);cityBuilding(320,35,20,20,3,0xb6a48e);
+cityBuilding(-235,335,22,20,4,0xaab3b5);cityBuilding(-180,365,19,22,3,0xb5a18d);
+cityBuilding(235,345,22,21,4,0x9da9a0);cityBuilding(285,375,20,20,3,0xb5b1a4);
+cityBuilding(-85,-275,19,20,3,0xb4a38e);cityBuilding(85,285,21,20,4,0x9eabb5);
 
 function flatLevel(x,z){return height(x,z);} 
 function crate(x,z,w=6,h=6,d=6,c=0x9f815e){box(x,flatLevel(x,z)+h/2,z,w,h,d,c);} 
@@ -225,32 +233,32 @@ function airportServiceTruck(x,z,y,rotation=0,color=0xd7dfdf){
 function airstrip(x,z){
   const y=flatLevel(x,z);
   // Área pavimentada ampla e sem estradas de terra atravessando o pátio.
-  box(x,y+.015,z,330,.08,440,0xb9b5aa);
+  box(x,y+.32,z,330,.12,440,0xb9b5aa);
   // Pista principal ampliada, com cabeceiras e marcações de pouso mais fortes.
-  box(x,y+.12,z,132,.18,390,0x62686a);
-  box(x,y+.225,z-183,124,.035,18,0xeee9dc);
-  box(x,y+.225,z+183,124,.035,18,0xeee9dc);
+  box(x,y+.43,z,132,.18,390,0x62686a);
+  box(x,y+.535,z-183,124,.035,18,0xeee9dc);
+  box(x,y+.535,z+183,124,.035,18,0xeee9dc);
   for(const side of [-1,1]){
-    box(x+side*62,y+.235,z,2.2,.08,350,0xf5f0e5);
-    for(let i=0;i<10;i++) box(x+side*52,y+.24,z-160+i*35,8,.08,17,0xf5f0e5);
+    box(x+side*62,y+.545,z,2.2,.08,350,0xf5f0e5);
+    for(let i=0;i<10;i++) box(x+side*52,y+.55,z-160+i*35,8,.08,17,0xf5f0e5);
     // Grandes marcas de cabeceira estilo aeroporto.
-    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.245,z-169,2.8,.08,19,0xf5f0e5);
-    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.245,z+169,2.8,.08,19,0xf5f0e5);
+    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.555,z-169,2.8,.08,19,0xf5f0e5);
+    for(let i=0;i<8;i++) box(x+side*(12+i*5.5),y+.555,z+169,2.8,.08,19,0xf5f0e5);
   }
-  box(x,y+.245,z,2.1,.08,316,0xf6f0e4);
-  for(let i=0;i<16;i++) box(x,y+.25,z-145+i*19,2.2,.08,9,0xf6f0e4);
+  box(x,y+.555,z,2.1,.08,316,0xf6f0e4);
+  for(let i=0;i<16;i++) box(x,y+.56,z-145+i*19,2.2,.08,9,0xf6f0e4);
   // Taxiway lateral curvada por segmentos e pátio para aeronaves/serviços.
-  box(x-112,y+.13,z+18,92,.16,252,0x777b7a);
-  box(x-112,y+.225,z+18,1.1,.08,230,0xf0e9d9);
-  box(x-112,y+.225,z+18,70,.08,1.1,0xf0e9d9);
-  box(x-112,y+.225,z-90,70,.08,1.1,0xf0e9d9);
+  box(x-112,y+.40,z+18,92,.16,252,0x777b7a);
+  box(x-112,y+.535,z+18,1.1,.08,230,0xf0e9d9);
+  box(x-112,y+.535,z+18,70,.08,1.1,0xf0e9d9);
+  box(x-112,y+.535,z-90,70,.08,1.1,0xf0e9d9);
   // Pátio de estacionamento, linhas de posições e áreas de segurança.
-  box(x-118,y+.14,z+56,112,.16,145,0x858785);
+  box(x-118,y+.40,z+56,112,.16,145,0x858785);
   for(let i=0;i<6;i++){
     const px=x-157+i*15;
-    box(px,y+.235,z+18,1,.08,66,0xf1ecdf);
-    box(px,y+.235,z+51,14,.08,1,0xf1ecdf);
-    box(px,y+.235,z+84,14,.08,1,0xf1ecdf);
+    box(px,y+.545,z+18,1,.08,66,0xf1ecdf);
+    box(px,y+.545,z+51,14,.08,1,0xf1ecdf);
+    box(px,y+.545,z+84,14,.08,1,0xf1ecdf);
   }
   // Hangar de manutenção e terminal de serviço, com portas grandes e cobertura azul.
   box(x-177,y+13,z-66,48,26,56,0xd9d4c7);
@@ -288,7 +296,7 @@ function airstrip(x,z){
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,.9,14),inkMat);wheel.rotation.z=Math.PI/2;wheel.position.set(gx,-5.55,gz);plane.add(wheel);
   }
   plane.position.set(x+6,y+7,z+48);plane.rotation.y=Math.PI/2;scene.add(plane);
-  obstacles.push({x:x+6,z:z+48,w:64,d:56});
+  obstacles.push({x:x+6,z:z+48,w:34,d:18});
   // Rebocadores, caminhão de serviço, carrinhos e caixas formam coberturas úteis na guerra.
   airportTug(x-157,z+22,y,0,0xe0b64f);
   airportTug(x-126,z+53,y,Math.PI/2,0xd75b43);
