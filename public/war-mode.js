@@ -361,21 +361,152 @@ for(let i=0;i<180;i++){
 const player={pos:new THREE.Vector3(),yaw:0,pitch:0,team:0,vehicle:null};
 let orbitYaw=0,orbitPitch=.2;
 scene.add(camera);
-const weapon=new THREE.Group(); camera.add(weapon);
-const gunMetal=mat(0x263b50),gunGrip=mat(0x534c46),gunAccent=mat(0xb73e40),gunPaper=mat(0xf0eadf),hand=mat(0xe0bd94);
-function gunPart(w,h,d,x,y,z,m,parent=weapon){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);parent.add(mesh);return mesh;}
-gunPart(.38,.25,.74,.44,-.43,-.48,gunPaper); gunPart(.52,.32,1.18,.40,-.30,-1.02,gunPaper); gunPart(.24,.08,.90,.40,-.10,-1.08,gunMetal);
-let barrel=new THREE.Mesh(new THREE.CylinderGeometry(.065,.075,1.72,8),gunMetal); barrel.rotation.x=Math.PI/2; barrel.position.set(.40,-.25,-2.16); weapon.add(barrel);
-let muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.14,8),gunPaper); muzzle.rotation.x=Math.PI/2; muzzle.position.set(.40,-.25,-3); weapon.add(muzzle);
-gunPart(.23,.62,.30,.36,-.68,-.76,gunGrip); gunPart(.07,.19,.08,.40,.12,-1.05,gunAccent); gunPart(.28,.4,.24,.40,-.59,-1.18,gunMetal); gunPart(.28,.22,.4,.42,-.53,-1.35,hand); weapon.position.set(0,0,0);
+const wallLight=0xf4f5f2, wall=0xffffff, wood=0xe4e0d7, woodLight=0xf5f3ed, red=0xd73535, black=0x151a22, hatchInk=0x747d8c;
+function warOutline(mesh,width=1.4){const edges=new THREE.EdgesGeometry(mesh.geometry,28);mesh.add(new THREE.LineSegments(edges,new THREE.LineBasicMaterial({color:ink,transparent:true,opacity:.94,linewidth:width})));return mesh;}
+function warHatching(mesh,w,h,d=0,amount=6,cross=true){const lines=[];for(let i=0;i<amount;i++){const t=(i+1)/(amount+1),x=-w/2+w*t;lines.push(new THREE.Vector3(x-.55,-h/2+.08,d),new THREE.Vector3(x+.55,h/2-.08,d));if(cross)lines.push(new THREE.Vector3(x+.55,-h/2+.08,d+.002),new THREE.Vector3(x-.55,h/2-.08,d+.002));}mesh.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(lines),new THREE.LineBasicMaterial({color:hatchInk,transparent:true,opacity:.48})));}
+  const weapon = new THREE.Group();
+  let weaponMuzzle = null;
+  camera.add(weapon); scene.add(camera);
+  function buildWeapon() {
+    // Rifle de desenho técnico: corpo claro, contorno de caneta, detalhes pretos e uma luneta real em cima.
+    const stock = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.38,.26,.72), mat(wallLight)));
+    stock.position.set(.44,-.43,-.48); stock.rotation.y=-.05; weapon.add(stock);
+    warHatching(stock,.28,.16,.37,3,true);
+
+    const receiver = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.52,.32,1.18), mat(wall)));
+    receiver.position.set(.40,-.30,-1.02); weapon.add(receiver);
+    warHatching(receiver,.38,.20,.60,4,true);
+
+    const topRail = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.24,.08,.92), mat(ink)));
+    topRail.position.set(.40,-.10,-1.08); weapon.add(topRail);
+
+    const barrel = warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.065,.075,1.72,8), mat(ink)));
+    barrel.rotation.x = Math.PI/2; barrel.position.set(.40,-.25,-2.16); weapon.add(barrel);
+    const muzzleRing = warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.14,8), mat(wallLight)));
+    muzzleRing.rotation.x = Math.PI/2; muzzleRing.position.set(.40,-.25,-3.00); weapon.add(muzzleRing);
+    weaponMuzzle = new THREE.Object3D(); weaponMuzzle.position.set(.40,-.25,-3.09); weapon.add(weaponMuzzle);
+
+    const grip = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.23,.62,.30), mat(wallLight)));
+    grip.rotation.x=-.18; grip.position.set(.36,-.68,-.76); weapon.add(grip);
+    warHatching(grip,.15,.43,.155,2,false);
+
+    // Fuzil sem luneta: o desenho fica limpo, como a arma simples da referência. O ADS usa somente a câmera.
+    const sight = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.05,.20,.05), mat(red)));
+    sight.position.set(.40,.12,-1.05); weapon.add(sight);
+    weapon.position.set(0,0,0); weapon.rotation.order='XYZ';
+    weapon.userData.kind='rifle';
+  }
+  buildWeapon();
+
+  // Variantes de arma mantidas leves: fuzil, sniper e faca.
+  const weaponVariants={rifle:weapon}; const weaponMuzzles={rifle:weaponMuzzle};
+
+  function buildSniper(){
+    const g = new THREE.Group();
+    g.userData.kind='sniper';
+    const stock = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.42,.30,1.05), mat(wallLight)));
+    stock.position.set(.40,-.46,-.62); g.add(stock); warHatching(stock,.31,.18,.53,4,true);
+    const receiver = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.48,.34,1.32), mat(wall)));
+    receiver.position.set(.40,-.30,-1.32); g.add(receiver); warHatching(receiver,.35,.22,.67,5,true);
+    const barrel = warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,2.05,8), mat(ink)));
+    barrel.rotation.x=Math.PI/2; barrel.position.set(.40,-.25,-2.94); g.add(barrel);
+    const muzzle = warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.10,.11,.18,8), mat(wallLight)));
+    muzzle.rotation.x=Math.PI/2; muzzle.position.set(.40,-.25,-3.95); g.add(muzzle);
+    const muzzlePoint = new THREE.Object3D(); muzzlePoint.position.set(.40,-.25,-4.05); g.add(muzzlePoint);
+    weaponMuzzles.sniper=muzzlePoint;
+    const grip = warOutline(new THREE.Mesh(new THREE.BoxGeometry(.24,.66,.30), mat(wallLight)));
+    grip.rotation.x=-.18; grip.position.set(.35,-.70,-1.00); g.add(grip); warHatching(grip,.16,.44,.16,2,false);
+    const bipod = new THREE.Group();
+    for(const side of [-1,1]){
+      const leg=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.07,.48,.08),mat(ink)));
+      leg.position.set(.40+side*.13,-.63,-1.90); leg.rotation.z=side*.18; bipod.add(leg);
+    }
+    g.add(bipod);
+    const scopeBody=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.105,.13,.78,10),mat(ink)));
+    scopeBody.rotation.x=Math.PI/2; scopeBody.position.set(.40,.00,-1.34); g.add(scopeBody);
+    for(const z of [-1.78,-.91]){
+      const ring=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.145,.145,.08,10),mat(wallLight)));
+      ring.rotation.x=Math.PI/2; ring.position.set(.40,.00,z); g.add(ring);
+    }
+    const lens=new THREE.Mesh(new THREE.CircleGeometry(.078,16),new THREE.MeshBasicMaterial({color:0x1c2735,transparent:true,opacity:.22,depthWrite:false}));
+    lens.rotation.x=-Math.PI/2; lens.position.set(.40,.00,-1.83); lens.userData.sniperLens=true; g.add(lens);
+    g.scale.set(.78,.78,.78);g.position.set(.08,-.10,.32); g.rotation.order='XYZ';
+    camera.add(g); weaponVariants.sniper=g;
+  }
+
+  function buildSmg(){
+    const g=new THREE.Group(); g.userData.kind='smg';
+    const body=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.44,.30,.92),mat(wall))); body.position.set(.42,-.34,-1.00); g.add(body); warHatching(body,.31,.18,.45,3,true);
+    const stock=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.26,.22,.55),mat(wallLight))); stock.position.set(.42,-.43,-.38); stock.rotation.x=-.06; g.add(stock);
+    const barrel=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.052,.062,.88,8),mat(ink))); barrel.rotation.x=Math.PI/2; barrel.position.set(.42,-.30,-1.88); g.add(barrel);
+    const muzzle=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.075,.08,.12,8),mat(wallLight))); muzzle.rotation.x=Math.PI/2; muzzle.position.set(.42,-.30,-2.32); g.add(muzzle);
+    const muzzlePoint=new THREE.Object3D(); muzzlePoint.position.set(.42,-.30,-2.40); g.add(muzzlePoint); weaponMuzzles.smg=muzzlePoint;
+    const grip=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.20,.52,.25),mat(ink))); grip.rotation.x=-.16; grip.position.set(.39,-.67,-.80); g.add(grip);
+    // V56.37: carregador convencional removido; o potinho de tinta é o carregador da SMG.
+    const sight=new THREE.Mesh(new THREE.BoxGeometry(.045,.14,.045),mat(red)); sight.position.set(.42,-.08,-1.35); g.add(sight);
+    g.scale.set(.80,.80,.80);g.position.set(.10,-.10,.38); g.rotation.order='XYZ'; camera.add(g); weaponVariants.smg=g;
+  }
+
+  function buildShotgun(){
+    const g=new THREE.Group(); g.userData.kind='shotgun';
+    const stock=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.34,.30,.92),mat(woodLight))); stock.position.set(.43,-.43,-.44); stock.rotation.x=-.05; g.add(stock); warHatching(stock,.24,.18,.44,3,false);
+    const receiver=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.46,.34,.92),mat(wall))); receiver.position.set(.42,-.31,-1.12); g.add(receiver); warHatching(receiver,.33,.21,.46,3,true);
+    const barrel=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.075,.085,2.15,8),mat(ink))); barrel.rotation.x=Math.PI/2; barrel.position.set(.42,-.27,-2.60); g.add(barrel);
+    const pump=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.34,.28,.70),mat(wood))); pump.position.set(.42,-.36,-2.02); g.add(pump); warHatching(pump,.24,.17,.35,3,false);
+    const muzzle=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.14,8),mat(wallLight))); muzzle.rotation.x=Math.PI/2; muzzle.position.set(.42,-.27,-3.68); g.add(muzzle);
+    const muzzlePoint=new THREE.Object3D(); muzzlePoint.position.set(.42,-.27,-3.78); g.add(muzzlePoint); weaponMuzzles.shotgun=muzzlePoint;
+    const sight=new THREE.Mesh(new THREE.SphereGeometry(.035,6,4),mat(red)); sight.position.set(.42,-.08,-2.55); g.add(sight);
+    const pumpBand=new THREE.Mesh(new THREE.BoxGeometry(.46,.34,.84),mat(red));pumpBand.position.set(.42,-.36,-2.04);g.add(pumpBand);const lowerTube=new THREE.Mesh(new THREE.CylinderGeometry(.045,.052,1.55,8),mat(black));lowerTube.rotation.x=Math.PI/2;lowerTube.position.set(.42,-.45,-2.62);g.add(lowerTube);g.scale.set(.90,.90,.96);g.position.set(.02,-.04,.06); g.rotation.order='XYZ'; camera.add(g); weaponVariants.shotgun=g;
+  }
+
+  function buildLauncher(){
+    const g=new THREE.Group(); g.userData.kind='launcher';
+    const tube=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.16,.19,1.95,10),mat(wallLight))); tube.rotation.x=Math.PI/2; tube.position.set(.40,-.30,-1.45); g.add(tube);
+    const rear=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.22,10),mat(ink))); rear.rotation.x=Math.PI/2; rear.position.set(.40,-.30,-.48); g.add(rear);
+    const front=warOutline(new THREE.Mesh(new THREE.CylinderGeometry(.21,.18,.26,10),mat(ink))); front.rotation.x=Math.PI/2; front.position.set(.40,-.30,-2.43); g.add(front);
+    const grip=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.22,.58,.30),mat(ink))); grip.rotation.x=-.16; grip.position.set(.38,-.66,-1.14); g.add(grip);
+    const sight=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.06),mat(red)); sight.position.set(.40,-.05,-1.58); g.add(sight);
+    const muzzlePoint=new THREE.Object3D(); muzzlePoint.position.set(.40,-.30,-2.62); g.add(muzzlePoint); weaponMuzzles.launcher=muzzlePoint;
+    g.position.set(0,0,0); g.rotation.order='XYZ'; camera.add(g); weaponVariants.launcher=g;
+  }
+
+  function buildKnife(){
+    const g = new THREE.Group();
+    g.userData.kind='knife';
+    // V56.28: faca mais sólida na mão, com guarda e lâmina estilo nanquim.
+    const hand=warOutline(new THREE.Mesh(new THREE.SphereGeometry(.20,8,6),mat(wallLight)),2.4);
+    hand.scale.set(1.0,.82,1.15); hand.position.set(.47,-.61,-.47); g.add(hand);
+    const handle=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.20,.22,.58),mat(0x17191d)),2.5);
+    handle.position.set(.46,-.54,-.69); handle.rotation.x=-.08; g.add(handle);
+    warHatching(handle,.14,.14,.29,3,false);
+    const guard=warOutline(new THREE.Mesh(new THREE.BoxGeometry(.42,.075,.12),mat(red)),2.3);
+    guard.position.set(.46,-.48,-.98); guard.rotation.z=-.04; g.add(guard);
+    const bladeShape=new THREE.Shape();
+    bladeShape.moveTo(-.03,0); bladeShape.lineTo(.17,.03); bladeShape.lineTo(.20,.68); bladeShape.lineTo(.06,1.15); bladeShape.lineTo(-.04,.72); bladeShape.closePath();
+    const bladeGeo=new THREE.ExtrudeGeometry(bladeShape,{depth:.07,bevelEnabled:false});
+    const blade=warOutline(new THREE.Mesh(bladeGeo,mat(0x25282d)),2.5);
+    blade.rotation.y=Math.PI/2; blade.rotation.z=-.07; blade.position.set(.39,-.43,-1.02); g.add(blade);
+    {
+      const pts=[]; for(let i=0;i<5;i++){const t=(i+1)/6, y=-.23+t*.46;pts.push(new THREE.Vector3(-.045,y,.047),new THREE.Vector3(.045,y+.08,.047));}
+      const hatch=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:hatchInk,transparent:true,opacity:.48}));
+      blade.add(hatch);
+    }
+    const bladeAccent=new THREE.Mesh(new THREE.BoxGeometry(.035,.035,.48),mat(red));
+    bladeAccent.position.set(.455,-.43,-1.38); bladeAccent.rotation.x=Math.PI/2; g.add(bladeAccent);
+    g.position.set(0,0,0); g.rotation.order='XYZ';
+    camera.add(g); weaponVariants.knife=g;
+  }
+  buildSniper(); buildSmg(); buildShotgun(); buildLauncher(); buildKnife();
+
+for(const [kind,v] of Object.entries(weaponVariants)){v.traverse(o=>{if(o.isMesh&&!o.userData.sniperLens&&o.material?.color){const c=o.material.color.getHex();if(c===red||c===0xff2038||c===0xd73535)o.material.color.setHex(0xb51f2e);else if(c!==0xf4f5f2&&c!==0xf5f3ed&&c!==0xffffff)o.material.color.setHex(0x17191d);if(o.material.emissive)o.material.emissive.setHex(0);}});v.visible=kind==='rifle';}
 const blockers=()=>obstacles; function blocked(x,z,r=1.2){return blockers().some(o=>Math.abs(x-o.x)<o.w/2+r&&Math.abs(z-o.z)<o.d/2+r);}
 const weaponDefs={rifle:{name:'FUZIL',mag:30,stock:150,delay:115,reload:1250,spread:.009},smg:{name:'SMG',mag:36,stock:180,delay:75,reload:1150,spread:.02},shotgun:{name:'ESCOPETA',mag:6,stock:42,delay:650,reload:1550,spread:.10,pellets:8},sniper:{name:'SNIPER',mag:6,stock:36,delay:950,reload:1700,spread:.001},launcher:{name:'LANÇA-FOGUETES',mag:1,stock:10,delay:1300,reload:1900,spread:.004},knife:{name:'FACA',mag:0,stock:0,delay:470,reload:0,spread:0}};
 const ammunition={}; for(const [key,def] of Object.entries(weaponDefs)) ammunition[key]={ammo:def.mag,reserve:def.stock};
 let weaponMode='rifle',reloadUntil=0,shootHeld=false,shootAt=0,kick=0,aiming=false;
 const weaponHud=document.getElementById('weaponHud'),fireButton=document.getElementById('fire'),reloadButton=document.getElementById('reload');
 function displayAmmo(){const d=weaponDefs[weaponMode],a=ammunition[weaponMode]; weaponHud.textContent=weaponMode==='knife'?'FACA':`${d.name}  •  ${a.ammo} / ${a.reserve}`;}
-function switchWeapon(mode){if(!weaponDefs[mode]||player.vehicle) return; weaponMode=mode; reloadUntil=0; displayAmmo(); showNotice(weaponDefs[mode].name);} 
-function shoot(){const now=performance.now(),d=weaponDefs[weaponMode],a=ammunition[weaponMode];if(player.vehicle||now<shootAt||now<reloadUntil) return; if(weaponMode!=='knife'&&a.ammo<=0){reload();return;} shootAt=now+d.delay; if(weaponMode!=='knife') a.ammo--; kick=weaponMode==='launcher'?.27:.10; displayAmmo(); const origin=camera.position.clone(),forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion),count=d.pellets||1; for(let i=0;i<count;i++){const direction=forward.clone(); if(d.spread){direction.x+=(Math.random()-.5)*d.spread;direction.y+=(Math.random()-.5)*d.spread;direction.normalize();} const range=weaponMode==='knife'?5:weaponMode==='shotgun'?190:weaponMode==='sniper'?950:weaponMode==='launcher'?700:weaponMode==='smg'?520:650; const ray=new THREE.Raycaster(origin,direction,.1,range); const impact=ray.intersectObjects(scene.children,true).find(hit=>hit.object!==terrainMesh&& !weapon.children.includes(hit.object)); const end=impact?impact.point:origin.clone().addScaledVector(direction,range); if(online.roomCode&&online.room?.status==='playing'){let best=null,bestAlong=range+1;for(const [token,g] of online.players){if(!g.visible||g.userData.team===['azul','vermelho','verde'][player.team])continue;const center=g.position.clone().add(new THREE.Vector3(0,1.35,0)),to=center.clone().sub(origin),along=to.dot(direction);if(along<0||along>range)continue;const near=origin.clone().addScaledVector(direction,along).distanceTo(center);if(near<1.35&&along<bestAlong){best={token,headshot:Math.abs(center.y-(origin.y+direction.y*along))<.48};bestAlong=along;}}if(best)sendOnlineHit(best.token,weaponMode==='sniper'&&best.headshot?100:weaponMode==='launcher'?100:weaponMode==='shotgun'?55:weaponMode==='knife'?85:weaponMode==='smg'?24:weaponMode==='sniper'?60:26,best.headshot);} if(weaponMode==='knife') continue; const start=camera.localToWorld(new THREE.Vector3(.45,-.33,-1.20)); const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([start,end]),new THREE.LineBasicMaterial({color:weaponMode==='launcher'?0xff6743:0xffb45c,transparent:true,opacity:.8})); scene.add(trace); setTimeout(()=>{scene.remove(trace);trace.geometry.dispose();trace.material.dispose();},weaponMode==='launcher'?240:75);} }
+function switchWeapon(mode){if(!weaponDefs[mode]||player.vehicle) return; weaponMode=mode; reloadUntil=0; for(const key of Object.keys(weaponVariants))weaponVariants[key].visible=(key===mode); displayAmmo(); showNotice(weaponDefs[mode].name);} 
+function shoot(){const now=performance.now(),d=weaponDefs[weaponMode],a=ammunition[weaponMode];if(player.vehicle||now<shootAt||now<reloadUntil) return; if(weaponMode!=='knife'&&a.ammo<=0){reload();return;} shootAt=now+d.delay; if(weaponMode!=='knife') a.ammo--; kick=weaponMode==='launcher'?.27:.10; displayAmmo(); const origin=camera.position.clone(),forward=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion),count=d.pellets||1; for(let i=0;i<count;i++){const direction=forward.clone(); if(d.spread){direction.x+=(Math.random()-.5)*d.spread;direction.y+=(Math.random()-.5)*d.spread;direction.normalize();} const range=weaponMode==='knife'?5:weaponMode==='shotgun'?190:weaponMode==='sniper'?2850:weaponMode==='launcher'?2100:weaponMode==='smg'?520:1950; const ray=new THREE.Raycaster(origin,direction,.1,range); const impact=ray.intersectObjects(scene.children,true).find(hit=>hit.object!==terrainMesh&& !weapon.children.includes(hit.object)); const end=impact?impact.point:origin.clone().addScaledVector(direction,range); if(online.roomCode&&online.room?.status==='playing'){let best=null,bestAlong=range+1;for(const [token,g] of online.players){if(!g.visible||g.userData.team===['azul','vermelho','verde'][player.team])continue;const center=g.position.clone().add(new THREE.Vector3(0,1.35,0)),to=center.clone().sub(origin),along=to.dot(direction);if(along<0||along>range)continue;const near=origin.clone().addScaledVector(direction,along).distanceTo(center);if(near<1.35&&along<bestAlong){best={token,headshot:Math.abs(center.y-(origin.y+direction.y*along))<.48};bestAlong=along;}}if(best)sendOnlineHit(best.token,weaponMode==='sniper'&&best.headshot?100:weaponMode==='launcher'?100:weaponMode==='shotgun'?55:weaponMode==='knife'?85:weaponMode==='smg'?24:weaponMode==='sniper'?60:26,best.headshot);} if(weaponMode==='knife') continue; const start=camera.localToWorld(new THREE.Vector3(.45,-.33,-1.20)); const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([start,end]),new THREE.LineBasicMaterial({color:weaponMode==='launcher'?0xff6743:0xffb45c,transparent:true,opacity:.8})); scene.add(trace); setTimeout(()=>{scene.remove(trace);trace.geometry.dispose();trace.material.dispose();},weaponMode==='launcher'?240:75);} }
 function reload(){if(player.vehicle||weaponMode==='knife') return; const d=weaponDefs[weaponMode],a=ammunition[weaponMode]; if(a.reserve<=0||a.ammo===d.mag||performance.now()<reloadUntil) return; const selected=weaponMode; reloadUntil=performance.now()+d.reload; showNotice('RECARREGANDO'); setTimeout(()=>{const n=Math.min(d.mag-a.ammo,a.reserve);a.ammo+=n;a.reserve-=n;if(weaponMode===selected) displayAmmo();},d.reload);} 
 fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.setPointerCapture(e.pointerId);shootHeld=true;shoot();}); for(const ev of ['pointerup','pointercancel','lostpointercapture']) fireButton.addEventListener(ev,()=>shootHeld=false); reloadButton.onclick=reload;
 
