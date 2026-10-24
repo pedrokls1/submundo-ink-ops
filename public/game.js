@@ -2198,7 +2198,7 @@ window.INK_MAP_BODIES = { reino: wonderlandMapBody, quarto: giantBedroomMapBody,
     multiplayer.networkBusy=true;
     try{
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),1800);
-      const response=await fetch('/api/multiplayer',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({action:'state',token:multiplayer.token,roomCode:multiplayer.roomCode,nickname:multiplayer.nickname,x:player.pos.x,y:player.pos.y,z:player.pos.z,yaw:player.yaw,pitch:player.pitch,weapon:weaponMode,alive:hp>0})});clearTimeout(timeout);
+      const response=await fetch('/api/multiplayer',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,body:JSON.stringify({action:'state',token:multiplayer.token,roomCode:multiplayer.roomCode,nickname:multiplayer.nickname,x:player.pos.x,y:player.pos.y,z:player.pos.z,yaw:player.yaw,pitch:player.pitch,weapon:weaponMode,gameMode:'multiplayer',alive:hp>0})});clearTimeout(timeout);
       const data=await response.json();if(response.ok)applyRemoteStates(data.players);
       if(response.ok&&data.self)serverSpawnGrace=Math.max(0,Number(data.self.invulnerableMs||0)/1000);
       if(response.ok&&data.scores){onlineScoreEl.style.display='block';onlineScoreEl.innerHTML='<span style="color:#294aa3">AZUL '+data.scores.azul+'</span> &nbsp;×&nbsp; <span style="color:#d73535">'+data.scores.vermelho+' VERMELHO</span>';}
