@@ -38,6 +38,27 @@
 @media(max-width:700px){#fireLeft{display:block}#stick{left:22px;bottom:24px}#scopeControl{right:122px;bottom:120px;width:66px;height:66px}#warVitals{left:8px;top:8px}#warStats{right:8px;top:8px}.war-panel{min-width:68px;padding:3px 5px;font-size:9px}.war-bar{width:68px;height:5px}}
 @media(min-width:800px){#stick{left:34px;bottom:34px}#warHud{font-size:11px}}
 
+
+/* Layout padrão corrigido: analógico à esquerda, disparo principal à direita e comandos agrupados sem cobrir a mira. */
+#warPanel{top:8px;left:50%;right:auto;transform:translateX(-50%);z-index:10;max-width:72vw}
+#warVitals{left:8px;top:8px;right:auto;bottom:auto;z-index:9}
+#warStats{right:8px;top:8px;left:auto;bottom:auto;z-index:9}
+#controls{position:fixed;inset:0;z-index:12;pointer-events:none}
+#stick{left:4vw;bottom:5vh;right:auto;top:auto;width:118px;height:118px}
+#fire{right:4vw;bottom:8vh;left:auto;top:auto;width:86px;height:86px}
+#fireLeft{left:24vw;bottom:8vh;right:auto;top:auto;width:72px;height:72px}
+#reload{right:4vw;bottom:23vh;left:auto;top:auto;width:72px;height:54px}
+#changeWeapon{right:4vw;bottom:33vh;left:auto;top:auto;width:92px;height:48px}
+#scopeControl{right:23vw;bottom:23vh;left:auto;top:auto;width:68px;height:68px}
+#action{left:4vw;bottom:23vh;right:auto;top:auto;width:68px;height:48px}
+#weaponHud{left:50%;right:auto;bottom:8px;top:auto;transform:translateX(-50%);z-index:9}
+#modeHint{left:50%;bottom:50px;top:auto;transform:translateX(-50%);z-index:9}
+#cross{left:50%;top:50%;z-index:7}
+@media(max-width:700px){#stick{left:3vw;bottom:5vh;width:108px;height:108px}#fire{right:3vw;bottom:8vh;width:78px;height:78px}#fireLeft{left:23vw;bottom:8vh;width:66px;height:66px}#reload{right:3vw;bottom:22vh;width:66px;height:48px}#changeWeapon{right:3vw;bottom:31vh;width:84px;height:44px}#scopeControl{right:22vw;bottom:22vh;width:60px;height:60px}#action{left:3vw;bottom:21vh;width:62px;height:44px}#weaponHud{bottom:5px;font-size:11px}#modeHint{bottom:35px;font-size:9px;max-width:90vw;white-space:normal;text-align:center}}
+@media(min-width:900px){#stick{left:28px;bottom:28px}#fire{right:30px;bottom:30px}#fireLeft{left:180px;bottom:38px}#reload{right:32px;bottom:145px}#changeWeapon{right:32px;bottom:210px}#scopeControl{right:145px;bottom:145px}#action{left:28px;bottom:165px}}
+body.hud-editing #controls button,body.hud-editing #stick,body.hud-editing #warHud,body.hud-editing #warPanel,body.hud-editing #weaponHud,body.hud-editing #modeHint,body.hud-editing #cross,body.hud-editing #top{outline:2px dashed #d73535;outline-offset:2px}
+body.hud-editing #controls button,body.hud-editing #stick{touch-action:none}body.hud-editing .war-panel,body.hud-editing #warPanel,body.hud-editing #weaponHud,body.hud-editing #modeHint,body.hud-editing #cross,body.hud-editing #top{pointer-events:auto!important}
+
 </style></head><body>
 <div id="top"><a href="/" style="pointer-events:auto"><button>← JOGO ORIGINAL</button></a><div id="info">CARREGANDO O MAPA...</div><button type="button" id="fullscreenButton" title="Tela cheia">⛶</button><details id="extraOptions"><summary>⚙</summary><button id="team">TROCAR BASE</button><button id="reset">RENASCE</button><button id="hudEdit">EDITAR HUD</button></details></div>
 <div id="warPanel"><div id="scoreRow"><div id="scoreBlue" class="scoreBox">AZUL 0</div><div id="scoreRed" class="scoreBox">VERMELHO 0</div><div id="scoreGreen" class="scoreBox">VERDE 0</div></div><div id="phaseHud"><span id="matchTimer">20:00</span><span id="phaseLabel">CONFRONTO INICIAL</span></div><div id="objectiveHud"><span id="objectiveLabel">SEM CONTROLE</span></div></div>
